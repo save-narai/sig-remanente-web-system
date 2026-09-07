@@ -45,127 +45,173 @@ $alto     = $data['alto'] ?? 0;
    CARDS
 ===================================================== */
 
-$cards = [
+$secciones = [
 
     [
-        "titulo" => "Total Jóvenes",
-        "valor"  => $resumen['totalJovenes'] ?? 0,
-        "icono"  => "fa-users",
-        "extra"  => "Registrados",
-        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=todos"
+        "titulo" => "Jóvenes",
+        "cards" => [
+
+            [
+                "titulo" => "Total Jóvenes",
+                "valor"  => $resumen['totalJovenes'] ?? 0,
+                "icono"  => "fa-users",
+                "extra"  => "Registrados",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=todos",
+                "enfasis" => true
+            ],
+
+            [
+                "titulo" => "Activos",
+                "valor"  => $resumen['activos'] ?? 0,
+                "icono"  => "fa-user-check",
+                "extra"  => "Actualmente",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=activos",
+                "enfasis" => true
+            ],
+
+            [
+                "titulo" => "Inactivos",
+                "valor"  => $resumen['inactivos'] ?? 0,
+                "icono"  => "fa-user-xmark",
+                "extra"  => "Sin actividad",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=inactivos"
+            ],
+
+            [
+                "titulo" => "Nuevos",
+                "valor"  => $resumen['nuevos'] ?? 0,
+                "icono"  => "fa-user-plus",
+                "extra"  => "Ingreso: últimos 3 meses",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=nuevos"
+            ],
+
+            [
+                "titulo" => "Antiguos",
+                "valor"  => $resumen['antiguos'] ?? 0,
+                "icono"  => "fa-user-clock",
+                "extra"  => "Ingreso: hace más de 3 meses",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=antiguos"
+            ]
+        ]
     ],
 
     [
-        "titulo" => "Activos",
-        "valor"  => $resumen['activos'] ?? 0,
-        "icono"  => "fa-user-check",
-        "extra"  => "Actualmente",
-        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=activos"
+        "titulo" => "Actividad y riesgo",
+        "cards" => [
+
+            [
+                "titulo" => "En riesgo",
+                "valor"  => $riesgo,
+                "icono"  => "fa-triangle-exclamation",
+                "extra"  => "Baja asistencia reciente",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=riesgo2",
+                "enfasis" => true
+            ],
+
+            [
+                "titulo" => "Alto riesgo",
+                "valor"  => $alto,
+                "icono"  => "fa-circle-exclamation",
+                "extra"  => "2 meses sin asistir",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=riesgo3",
+                "enfasis" => true
+            ],
+
+            [
+                "titulo" => "Seguimiento pendiente",
+                "valor"  => $resumen['seguimientoPendiente'] ?? 0,
+                "icono"  => "fa-user-clock",
+                "extra"  => "Jóvenes nuevos sin asignar",
+                "href"   => BASE_URL . "/views/seguimientos/asignaciones.php?anio=" . date('Y') . "&mes=" . date('n')
+            ]
+        ]
     ],
 
     [
-        "titulo" => "Inactivos",
-        "valor"  => $resumen['inactivos'] ?? 0,
-        "icono"  => "fa-user-xmark",
-        "extra"  => "Sin actividad",
-        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=inactivos"
-    ],
+        "titulo" => "Estado espiritual y ministerio",
+        "cards" => [
 
-    // NOTA: esta tarjeta "Servidores" sigue viniendo de es_servidor,
-    // sin ningún cambio (ver informe de Etapa 3 sobre qué hacer con
-    // ella frente a la nueva "Servidores/Líderes de Jóvenes").
-    [
-        "titulo" => "Servidores (todos los ministerios)",
-        "valor"  => $resumen['servidores'] ?? 0,
-        "icono"  => "fa-hands-praying",
-        "extra"  => "Activos"
-    ],
+            [
+                "titulo" => "Congregantes",
+                "valor"  => $resumen['porEstadoEspiritual']['congregante'] ?? 0,
+                "icono"  => "fa-church",
+                "extra"  => "Estado espiritual",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=congregantes"
+            ],
 
-    [
-        "titulo" => "Reuniones",
-        "valor"  => $resumen['reuniones'] ?? 0,
-        "icono"  => "fa-calendar",
-        "extra"  => "Realizadas"
-    ],
+            [
+                "titulo" => "Discipulado",
+                "valor"  => $resumen['porEstadoEspiritual']['discipulado'] ?? 0,
+                "icono"  => "fa-book-bible",
+                "extra"  => "Estado espiritual",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=discipulado"
+            ],
 
-    [
-        "titulo" => "Asistencia",
-        "valor"  => ($resumen['asistencia'] ?? 0) . '%',
-        "icono"  => "fa-chart-line",
-        "extra"  => "Promedio"
-    ],
+            [
+                "titulo" => "Servidores/Líderes de Jóvenes",
+                "valor"  => $resumen['servidoresLideresJovenes'] ?? 0,
+                "icono"  => "fa-star",
+                "extra"  => "Provisional (estado espiritual)",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=servidores_lideres"
+            ],
 
-    [
-        "titulo" => "Nuevos",
-        "valor"  => $resumen['nuevos'] ?? 0,
-        "icono"  => "fa-user-plus",
-        "extra"  => "Ingreso ≤ 3 meses",
-        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=nuevos"
-    ],
-
-    [
-        "titulo" => "Antiguos",
-        "valor"  => $resumen['antiguos'] ?? 0,
-        "icono"  => "fa-user-clock",
-        "extra"  => "Registrados"
-    ],
-
-    // ---- Nuevos indicadores (Fase 2 - Etapa 3) ----
-
-    [
-        "titulo" => "En riesgo",
-        "valor"  => $riesgo,
-        "icono"  => "fa-triangle-exclamation",
-        "extra"  => "Baja asistencia reciente",
-        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=riesgo2"
+            // NOTA: esta tarjeta sigue viniendo de es_servidor, sin
+            // ningún cambio (ver informe: auditoría de es_servidor).
+            [
+                "titulo" => "Servidores (todos los ministerios)",
+                "valor"  => $resumen['servidores'] ?? 0,
+                "icono"  => "fa-hands-praying",
+                "extra"  => "Activos",
+                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=servidores_todos_ministerios"
+            ]
+        ]
     ],
 
     [
-        "titulo" => "Alto riesgo",
-        "valor"  => $alto,
-        "icono"  => "fa-circle-exclamation",
-        "extra"  => "2 meses sin asistir",
-        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=riesgo3"
+        "titulo" => "Formación / Discipulado",
+        "cards" => [
+
+            [
+                "titulo" => "Atención de discipulado",
+                "valor"  => $resumen['discipuladoAtencion'] ?? 0,
+                "icono"  => "fa-graduation-cap",
+                "extra"  => "Ciclos activos",
+                "href"   => BASE_URL . "/views/formacion/discipulado/index.php?estado=ACTIVO"
+            ],
+
+            [
+                "titulo" => "Ciclos de discipulado",
+                "valor"  => $resumen['ciclosDiscipuladoTotal'] ?? 0,
+                "icono"  => "fa-layer-group",
+                "extra"  => ($resumen['ciclosDiscipuladoActivos'] ?? 0) . " activos",
+                "href"   => BASE_URL . "/views/formacion/discipulado/index.php"
+            ]
+        ]
     ],
 
     [
-        "titulo" => "Congregantes",
-        "valor"  => $resumen['porEstadoEspiritual']['congregante'] ?? 0,
-        "icono"  => "fa-church",
-        "extra"  => "Estado espiritual",
-        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=congregantes"
-    ],
+        "titulo" => "Reuniones y asistencia",
+        "cards" => [
 
-    [
-        "titulo" => "Discipulado",
-        "valor"  => $resumen['porEstadoEspiritual']['discipulado'] ?? 0,
-        "icono"  => "fa-book-bible",
-        "extra"  => "Estado espiritual",
-        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=discipulado"
-    ],
+            [
+                "titulo" => "Reuniones",
+                "valor"  => $resumen['reuniones'] ?? 0,
+                "icono"  => "fa-calendar",
+                "extra"  => "Realizadas",
+                "href"   => BASE_URL . "/views/reuniones/index.php"
+            ],
 
-    [
-        "titulo" => "Servidores/Líderes de Jóvenes",
-        "valor"  => $resumen['servidoresLideresJovenes'] ?? 0,
-        "icono"  => "fa-star",
-        "extra"  => "Provisional (estado espiritual)",
-        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=servidores_lideres"
-    ],
-
-    [
-        "titulo" => "Seguimiento pendiente",
-        "valor"  => $resumen['seguimientoPendiente'] ?? 0,
-        "icono"  => "fa-user-clock",
-        "extra"  => "Jóvenes nuevos sin asignar",
-        "href"   => BASE_URL . "/views/seguimientos/asignaciones.php?anio=" . date('Y') . "&mes=" . date('n')
-    ],
-
-    [
-        "titulo" => "Atención de discipulado",
-        "valor"  => $resumen['discipuladoAtencion'] ?? 0,
-        "icono"  => "fa-graduation-cap",
-        "extra"  => "Ciclos activos",
-        "href"   => BASE_URL . "/views/formacion/discipulado/index.php?estado=ACTIVO"
+            // Sin "href": es un porcentaje/promedio, no representa un
+            // grupo de registros navegable (no hay una vista de
+            // "todas las asistencias" fuera de cada reunión
+            // individual).
+            [
+                "titulo" => "Asistencia",
+                "valor"  => ($resumen['asistencia'] ?? 0) . '%',
+                "icono"  => "fa-chart-line",
+                "extra"  => "Promedio"
+            ]
+        ]
     ]
 ];
 
@@ -243,14 +289,16 @@ require_once __DIR__ . '/../includes/header.php';
         <?php endif; ?>
 
         <!-- =====================================================
-           SECTION
+           SECCIONES
         ===================================================== -->
+
+        <?php foreach ($secciones as $seccion): ?>
 
         <div class="page-section">
 
             <h2 class="page-section-title">
 
-                Resumen General
+                <?= htmlspecialchars($seccion['titulo']) ?>
 
             </h2>
 
@@ -260,12 +308,18 @@ require_once __DIR__ . '/../includes/header.php';
 
             <div class="dashboard__cards">
 
-                <?php foreach($cards as $card): ?>
+                <?php foreach($seccion['cards'] as $card): ?>
 
                 <?php $tag = isset($card['href']) ? 'a' : 'div'; ?>
 
+                <?php
+                    $clases = 'dashboard__card';
+                    $clases .= isset($card['href']) ? ' dashboard__card--link' : '';
+                    $clases .= !empty($card['enfasis']) ? ' dashboard__card--enfasis' : '';
+                ?>
+
                 <<?= $tag ?>
-                    class="dashboard__card<?= isset($card['href']) ? ' dashboard__card--link' : '' ?>"
+                    class="<?= $clases ?>"
                     <?= isset($card['href']) ? 'href="' . htmlspecialchars($card['href']) . '"' : '' ?>
                 >
 
@@ -308,6 +362,8 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
 
         </div>
+
+        <?php endforeach; ?>
 
     </div>
 

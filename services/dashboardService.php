@@ -76,14 +76,25 @@ function obtenerDashboardData(PDO $pdo): array
     // jóvenes únicos: una misma persona con más de una inscripción
     // podría contarse más de una vez (poco probable hoy, pero no se
     // asume lo contrario).
+    $ciclosActivos = obtenerCiclosDiscipulado($pdo, ['estado' => 'ACTIVO']);
+
     $discipuladoAtencion = 0;
 
-    foreach (obtenerCiclosDiscipulado($pdo, ['estado' => 'ACTIVO']) as $ciclo) {
+    foreach ($ciclosActivos as $ciclo) {
 
         $resumenCiclo = obtenerResumenCicloDiscipulado($pdo, (int) $ciclo['id']);
 
         $discipuladoAtencion += (int) $resumenCiclo['requieren_atencion'];
     }
+
+    // Total de ciclos de discipulado (cualquier estado) para la
+    // tarjeta "Ciclos" del Dashboard. Se reutiliza el conteo de
+    // activos ya obtenido arriba, no se repite esa consulta.
+    $resumen["ciclosDiscipuladoTotal"] =
+        count(obtenerCiclosDiscipulado($pdo));
+
+    $resumen["ciclosDiscipuladoActivos"] =
+        count($ciclosActivos);
 
     return [
 

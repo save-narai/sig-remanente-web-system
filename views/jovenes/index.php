@@ -25,9 +25,11 @@ $permitidos = [
     "riesgo2",
     "riesgo3",
     "nuevos",
+    "antiguos",
     "congregantes",
     "discipulado",
-    "servidores_lideres"
+    "servidores_lideres",
+    "servidores_todos_ministerios"
 ];
 
 $filtro = $_GET["filtro"] ?? "todos";
@@ -78,6 +80,12 @@ if ($filtro === "nuevos") {
     $where[] = "TIMESTAMPDIFF(MONTH, j.fecha_ingreso, CURDATE()) <= 3";
 }
 
+// "Antiguos": complemento exacto de "nuevos", mismo criterio de
+// dashboardService.php::obtenerNuevosAntiguos() (> 3 meses).
+if ($filtro === "antiguos") {
+    $where[] = "TIMESTAMPDIFF(MONTH, j.fecha_ingreso, CURDATE()) > 3";
+}
+
 // Congregantes / Discipulado / Servidores-Líderes: estado_espiritual tal cual,
 // las mismas categorías de jovenService.php (ESTADOS_ESPIRITUALES). No se
 // mezcla con es_servidor.
@@ -91,6 +99,15 @@ if ($filtro === "discipulado") {
 
 if ($filtro === "servidores_lideres") {
     $where[] = "j.estado_espiritual IN ('SERVIDOR', 'LIDER')";
+}
+
+// Servidores de CUALQUIER ministerio (es_servidor), a propósito
+// separado y sin relación con estado_espiritual — mismo campo que
+// ya usa la tarjeta "Servidores (todos los ministerios)" del
+// Dashboard y que actividadService.php usa para el criterio de
+// "maduro". No se toca su significado, solo se hace navegable.
+if ($filtro === "servidores_todos_ministerios") {
+    $where[] = "j.es_servidor = 1";
 }
 
 if (!empty($where)) {
@@ -255,79 +272,135 @@ require_once __DIR__ . "/../../includes/header.php";
 
     <!-- FILTROS -->
 
-    <div class="jovenes__filtros">
+    <div class="jovenes__filtros-panel">
 
-        <a
-            href="?filtro=todos"
-            class="jovenes__tag jovenes__tag--todos <?= $filtro === 'todos' ? 'jovenes__tag--active' : '' ?>"
-        >
-            Todos
-        </a>
+        <div class="jovenes__filtros-group">
 
-        <a
-            href="?filtro=activos"
-            class="jovenes__tag jovenes__tag--activos <?= $filtro === 'activos' ? 'jovenes__tag--active' : '' ?>"
-        >
-            Activos
-        </a>
+            <span class="jovenes__filtros-label">Estado</span>
 
-        <a
-            href="?filtro=inactivos"
-            class="jovenes__tag jovenes__tag--inactivos <?= $filtro === 'inactivos' ? 'jovenes__tag--active' : '' ?>"
-        >
-            Inactivos
-        </a>
+            <div class="jovenes__filtros">
 
-        <a
-            href="?filtro=eliminados"
-            class="jovenes__tag jovenes__tag--inactivos <?= $filtro === 'eliminados' ? 'jovenes__tag--active' : '' ?>"
-        >
-            Eliminados
-        </a>
+                <a
+                    href="?filtro=todos"
+                    class="jovenes__tag jovenes__tag--todos <?= $filtro === 'todos' ? 'jovenes__tag--active' : '' ?>"
+                >
+                    Todos
+                </a>
 
-        <a
-            href="?filtro=riesgo2"
-            class="jovenes__tag jovenes__tag--riesgo <?= $filtro === 'riesgo2' ? 'jovenes__tag--active' : '' ?>"
-        >
-            Riesgo
-        </a>
+                <a
+                    href="?filtro=activos"
+                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'activos' ? 'jovenes__tag--active' : '' ?>"
+                >
+                    Activos
+                </a>
 
-        <a
-            href="?filtro=riesgo3"
-            class="jovenes__tag jovenes__tag--alto <?= $filtro === 'riesgo3' ? 'jovenes__tag--active' : '' ?>"
-        >
-            Alto riesgo
-        </a>
+                <a
+                    href="?filtro=inactivos"
+                    class="jovenes__tag jovenes__tag--inactivos <?= $filtro === 'inactivos' ? 'jovenes__tag--active' : '' ?>"
+                >
+                    Inactivos
+                </a>
 
-        <a
-            href="?filtro=nuevos"
-            class="jovenes__tag jovenes__tag--activos <?= $filtro === 'nuevos' ? 'jovenes__tag--active' : '' ?>"
-            title="Fecha de ingreso hace 3 meses o menos"
-        >
-            Nuevos (≤ 3 meses)
-        </a>
+                <a
+                    href="?filtro=eliminados"
+                    class="jovenes__tag jovenes__tag--inactivos <?= $filtro === 'eliminados' ? 'jovenes__tag--active' : '' ?>"
+                >
+                    Eliminados
+                </a>
 
-        <a
-            href="?filtro=congregantes"
-            class="jovenes__tag jovenes__tag--activos <?= $filtro === 'congregantes' ? 'jovenes__tag--active' : '' ?>"
-        >
-            Congregantes
-        </a>
+            </div>
 
-        <a
-            href="?filtro=discipulado"
-            class="jovenes__tag jovenes__tag--activos <?= $filtro === 'discipulado' ? 'jovenes__tag--active' : '' ?>"
-        >
-            Discipulado
-        </a>
+        </div>
 
-        <a
-            href="?filtro=servidores_lideres"
-            class="jovenes__tag jovenes__tag--activos <?= $filtro === 'servidores_lideres' ? 'jovenes__tag--active' : '' ?>"
-            title="estado_espiritual = SERVIDOR o LIDER (provisional, no distingue ministerio todavía)"
-        >
-            Servidores/Líderes
-        </a>
+        <div class="jovenes__filtros-group">
+
+            <span class="jovenes__filtros-label">Actividad / Riesgo</span>
+
+            <div class="jovenes__filtros">
+
+                <a
+                    href="?filtro=riesgo2"
+                    class="jovenes__tag jovenes__tag--riesgo <?= $filtro === 'riesgo2' ? 'jovenes__tag--active' : '' ?>"
+                >
+                    Riesgo
+                </a>
+
+                <a
+                    href="?filtro=riesgo3"
+                    class="jovenes__tag jovenes__tag--alto <?= $filtro === 'riesgo3' ? 'jovenes__tag--active' : '' ?>"
+                >
+                    Alto riesgo
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="jovenes__filtros-group">
+
+            <span class="jovenes__filtros-label">Estado espiritual</span>
+
+            <div class="jovenes__filtros">
+
+                <a
+                    href="?filtro=congregantes"
+                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'congregantes' ? 'jovenes__tag--active' : '' ?>"
+                >
+                    Congregantes
+                </a>
+
+                <a
+                    href="?filtro=discipulado"
+                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'discipulado' ? 'jovenes__tag--active' : '' ?>"
+                >
+                    Discipulado
+                </a>
+
+                <a
+                    href="?filtro=servidores_lideres"
+                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'servidores_lideres' ? 'jovenes__tag--active' : '' ?>"
+                    title="estado_espiritual = SERVIDOR o LIDER (provisional, no distingue ministerio todavía)"
+                >
+                    Servidores/Líderes
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="jovenes__filtros-group">
+
+            <span class="jovenes__filtros-label">Características</span>
+
+            <div class="jovenes__filtros">
+
+                <a
+                    href="?filtro=nuevos"
+                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'nuevos' ? 'jovenes__tag--active' : '' ?>"
+                    title="Fecha de ingreso hace 3 meses o menos"
+                >
+                    Nuevos (últimos 3 meses)
+                </a>
+
+                <a
+                    href="?filtro=antiguos"
+                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'antiguos' ? 'jovenes__tag--active' : '' ?>"
+                    title="Fecha de ingreso hace más de 3 meses"
+                >
+                    Antiguos
+                </a>
+
+                <a
+                    href="?filtro=servidores_todos_ministerios"
+                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'servidores_todos_ministerios' ? 'jovenes__tag--active' : '' ?>"
+                    title="es_servidor = Sí, de cualquier ministerio"
+                >
+                    Servidores (todos los ministerios)
+                </a>
+
+            </div>
+
+        </div>
 
     </div>
 

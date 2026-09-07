@@ -58,6 +58,19 @@
 }
 
 /* =====================================================
+   ENFASIS (jerarquía visual: métricas principales
+   de cada sección, mismo componente, más peso visual)
+===================================================== */
+.dashboard__card--enfasis {
+  min-height: 170px;
+  box-shadow: 0 0 0 2px rgba(255, 95, 46, 0.35), var(--shadow);
+}
+
+.dashboard__card--enfasis .dashboard__card-value {
+  font-size: 42px;
+}
+
+/* =====================================================
    TOP
 ===================================================== */
 .dashboard__card-top {
