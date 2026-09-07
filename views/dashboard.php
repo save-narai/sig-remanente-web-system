@@ -51,25 +51,31 @@ $cards = [
         "titulo" => "Total Jóvenes",
         "valor"  => $resumen['totalJovenes'] ?? 0,
         "icono"  => "fa-users",
-        "extra"  => "Registrados"
+        "extra"  => "Registrados",
+        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=todos"
     ],
 
     [
         "titulo" => "Activos",
         "valor"  => $resumen['activos'] ?? 0,
         "icono"  => "fa-user-check",
-        "extra"  => "Actualmente"
+        "extra"  => "Actualmente",
+        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=activos"
     ],
 
     [
         "titulo" => "Inactivos",
         "valor"  => $resumen['inactivos'] ?? 0,
         "icono"  => "fa-user-xmark",
-        "extra"  => "Sin actividad"
+        "extra"  => "Sin actividad",
+        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=inactivos"
     ],
 
+    // NOTA: esta tarjeta "Servidores" sigue viniendo de es_servidor,
+    // sin ningún cambio (ver informe de Etapa 3 sobre qué hacer con
+    // ella frente a la nueva "Servidores/Líderes de Jóvenes").
     [
-        "titulo" => "Servidores",
+        "titulo" => "Servidores (todos los ministerios)",
         "valor"  => $resumen['servidores'] ?? 0,
         "icono"  => "fa-hands-praying",
         "extra"  => "Activos"
@@ -93,7 +99,8 @@ $cards = [
         "titulo" => "Nuevos",
         "valor"  => $resumen['nuevos'] ?? 0,
         "icono"  => "fa-user-plus",
-        "extra"  => "Este mes"
+        "extra"  => "Ingreso ≤ 3 meses",
+        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=nuevos"
     ],
 
     [
@@ -101,6 +108,64 @@ $cards = [
         "valor"  => $resumen['antiguos'] ?? 0,
         "icono"  => "fa-user-clock",
         "extra"  => "Registrados"
+    ],
+
+    // ---- Nuevos indicadores (Fase 2 - Etapa 3) ----
+
+    [
+        "titulo" => "En riesgo",
+        "valor"  => $riesgo,
+        "icono"  => "fa-triangle-exclamation",
+        "extra"  => "Baja asistencia reciente",
+        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=riesgo2"
+    ],
+
+    [
+        "titulo" => "Alto riesgo",
+        "valor"  => $alto,
+        "icono"  => "fa-circle-exclamation",
+        "extra"  => "2 meses sin asistir",
+        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=riesgo3"
+    ],
+
+    [
+        "titulo" => "Congregantes",
+        "valor"  => $resumen['porEstadoEspiritual']['congregante'] ?? 0,
+        "icono"  => "fa-church",
+        "extra"  => "Estado espiritual",
+        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=congregantes"
+    ],
+
+    [
+        "titulo" => "Discipulado",
+        "valor"  => $resumen['porEstadoEspiritual']['discipulado'] ?? 0,
+        "icono"  => "fa-book-bible",
+        "extra"  => "Estado espiritual",
+        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=discipulado"
+    ],
+
+    [
+        "titulo" => "Servidores/Líderes de Jóvenes",
+        "valor"  => $resumen['servidoresLideresJovenes'] ?? 0,
+        "icono"  => "fa-star",
+        "extra"  => "Provisional (estado espiritual)",
+        "href"   => BASE_URL . "/views/jovenes/index.php?filtro=servidores_lideres"
+    ],
+
+    [
+        "titulo" => "Seguimiento pendiente",
+        "valor"  => $resumen['seguimientoPendiente'] ?? 0,
+        "icono"  => "fa-user-clock",
+        "extra"  => "Jóvenes nuevos sin asignar",
+        "href"   => BASE_URL . "/views/seguimientos/asignaciones.php?anio=" . date('Y') . "&mes=" . date('n')
+    ],
+
+    [
+        "titulo" => "Atención de discipulado",
+        "valor"  => $resumen['discipuladoAtencion'] ?? 0,
+        "icono"  => "fa-graduation-cap",
+        "extra"  => "Ciclos activos",
+        "href"   => BASE_URL . "/views/formacion/discipulado/index.php?estado=ACTIVO"
     ]
 ];
 
@@ -197,7 +262,12 @@ require_once __DIR__ . '/../includes/header.php';
 
                 <?php foreach($cards as $card): ?>
 
-                <div class="dashboard__card">
+                <?php $tag = isset($card['href']) ? 'a' : 'div'; ?>
+
+                <<?= $tag ?>
+                    class="dashboard__card<?= isset($card['href']) ? ' dashboard__card--link' : '' ?>"
+                    <?= isset($card['href']) ? 'href="' . htmlspecialchars($card['href']) . '"' : '' ?>
+                >
 
                     <div class="dashboard__card-top">
 
@@ -231,7 +301,7 @@ require_once __DIR__ . '/../includes/header.php';
 
                     </div>
 
-                </div>
+                </<?= $tag ?>>
 
                 <?php endforeach; ?>
 

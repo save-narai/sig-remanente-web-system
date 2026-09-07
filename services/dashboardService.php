@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/actividadService.php';
 require_once __DIR__ . '/asignacionSeguimientoService.php';
+require_once __DIR__ . '/discipuladoService.php';
 
 function obtenerDashboardData(PDO $pdo): array
 {
@@ -39,6 +40,19 @@ function obtenerDashboardData(PDO $pdo): array
     $resumen["porEstadoEspiritual"] =
         obtenerDistribucionEstadoEspiritual($pdo);
 
+    // Indicador provisional "Servidores/Líderes de Jóvenes" para el
+    // Dashboard: estado_espiritual IN ('SERVIDOR','LIDER'). A
+    // propósito NO es lo mismo que resumen['servidores'] (que sigue
+    // viniendo de la columna es_servidor, sin tocar, para lo que ya
+    // la use). PENDIENTE documentado: ni estado_espiritual ni
+    // es_servidor tienen en el modelo actual una columna que indique
+    // "ministerio de Jóvenes" vs "otro ministerio" (lo que pide la
+    // Fase 4) — este número es el mejor disponible hoy, no una
+    // certeza sobre a qué ministerio pertenece cada quien.
+    $resumen["servidoresLideresJovenes"] =
+        $resumen["porEstadoEspiritual"]["servidor"] +
+        $resumen["porEstadoEspiritual"]["lider"];
+
     // Actividad/riesgo: se reutiliza actividadService.php tal cual
     // (Conectado / Observación / Riesgo / Alto Riesgo), en vez de la
     // lógica propia que tenía este archivo antes (ver informe de la
@@ -53,6 +67,23 @@ function obtenerDashboardData(PDO $pdo): array
         (int) date('Y'),
         (int) date('n')
     );
+
+    // Discipulado/Formación que requiere atención: se suma
+    // requieren_atencion (ya calculado por discipuladoService.php,
+    // obtenerResumenCicloDiscipulado) de cada ciclo ACTIVO. No se
+    // reimplementa ninguna regla de alerta, solo se agrega entre
+    // ciclos. Es un conteo de INSCRIPCIONES con alerta, no de
+    // jóvenes únicos: una misma persona con más de una inscripción
+    // podría contarse más de una vez (poco probable hoy, pero no se
+    // asume lo contrario).
+    $discipuladoAtencion = 0;
+
+    foreach (obtenerCiclosDiscipulado($pdo, ['estado' => 'ACTIVO']) as $ciclo) {
+
+        $resumenCiclo = obtenerResumenCicloDiscipulado($pdo, (int) $ciclo['id']);
+
+        $discipuladoAtencion += (int) $resumenCiclo['requieren_atencion'];
+    }
 
     return [
 
@@ -89,8 +120,18 @@ function obtenerDashboardData(PDO $pdo): array
         "observacion" =>
             $conexion["observacion"],
 
+        // Las 3 fuentes de "atención pendiente" se entregan POR
+        // SEPARADO a propósito (decisión del usuario): no se suman
+        // en un único número porque no representan lo mismo (una es
+        // riesgo de asistencia, otra es seguimiento de jóvenes
+        // nuevos, otra es avance de discipulado) y una misma persona
+        // podría aparecer en más de una. La Etapa 2 decide cómo se
+        // muestran (separadas, agrupadas, o ambas).
         "seguimientoPendiente" =>
-            count($seguimientoPendiente)
+            count($seguimientoPendiente),
+
+        "discipuladoAtencion" =>
+            $discipuladoAtencion
     ];
 }
 

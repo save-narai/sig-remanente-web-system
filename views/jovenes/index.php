@@ -23,7 +23,11 @@ $permitidos = [
     "inactivos",
     "eliminados",
     "riesgo2",
-    "riesgo3"
+    "riesgo3",
+    "nuevos",
+    "congregantes",
+    "discipulado",
+    "servidores_lideres"
 ];
 
 $filtro = $_GET["filtro"] ?? "todos";
@@ -45,73 +49,9 @@ SELECT
     j.fecha_actualizacion_edad,
     j.estado_espiritual,
     j.estado_actividad,
-    j.fecha_ingreso,
-
-    COALESCE(
-        SUM(
-            CASE
-                WHEN a.asistio = 0
-                AND r.fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                THEN 1
-                ELSE 0
-            END
-        ),
-        0
-    ) AS faltas_recientes,
-
-    MAX(
-        CASE
-            WHEN a.asistio = 1
-            THEN r.fecha
-        END
-    ) AS ultima_asistencia,
-
-    COALESCE(
-        SUM(
-            CASE
-                WHEN a.asistio = 1
-                AND MONTH(r.fecha) = MONTH(CURDATE())
-                AND YEAR(r.fecha) = YEAR(CURDATE())
-                THEN 1
-                ELSE 0
-            END
-        ),
-        0
-    ) AS asistencias_mes_actual,
-
-    COALESCE(
-        SUM(
-            CASE
-                WHEN a.asistio = 1
-                AND MONTH(r.fecha) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
-                AND YEAR(r.fecha) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
-                THEN 1
-                ELSE 0
-            END
-        ),
-        0
-    ) AS asistencias_mes_1,
-
-    COALESCE(
-        SUM(
-            CASE
-                WHEN a.asistio = 1
-                AND MONTH(r.fecha) = MONTH(DATE_SUB(CURDATE(), INTERVAL 2 MONTH))
-                AND YEAR(r.fecha) = YEAR(DATE_SUB(CURDATE(), INTERVAL 2 MONTH))
-                THEN 1
-                ELSE 0
-            END
-        ),
-        0
-    ) AS asistencias_mes_2
+    j.fecha_ingreso
 
 FROM jovenes j
-
-LEFT JOIN asistencia a
-    ON a.joven_id = j.id
-
-LEFT JOIN reuniones r
-    ON r.id = a.reunion_id
 ";
 
 $where = [];
@@ -130,44 +70,31 @@ if ($filtro === "eliminados") {
     $where = ["j.estado_actividad = 'ELIMINADO'"];
 }
 
+// "Nuevos": mismo criterio exacto que dashboardService.php::obtenerNuevosAntiguos()
+// (fecha_ingreso <= 3 meses). No existía ninguna función/consulta reutilizable
+// para el LISTADO (solo el conteo agregado del dashboard), así que se repite
+// aquí la misma condición TIMESTAMPDIFF, sin inventar un criterio distinto.
+if ($filtro === "nuevos") {
+    $where[] = "TIMESTAMPDIFF(MONTH, j.fecha_ingreso, CURDATE()) <= 3";
+}
+
+// Congregantes / Discipulado / Servidores-Líderes: estado_espiritual tal cual,
+// las mismas categorías de jovenService.php (ESTADOS_ESPIRITUALES). No se
+// mezcla con es_servidor.
+if ($filtro === "congregantes") {
+    $where[] = "j.estado_espiritual = 'CONGREGANTE'";
+}
+
+if ($filtro === "discipulado") {
+    $where[] = "j.estado_espiritual = 'DISCIPULADO'";
+}
+
+if ($filtro === "servidores_lideres") {
+    $where[] = "j.estado_espiritual IN ('SERVIDOR', 'LIDER')";
+}
+
 if (!empty($where)) {
     $query .= " WHERE " . implode(" AND ", $where);
-}
-
-$query .= "
-GROUP BY
-    j.id,
-    j.nombre_completo,
-    j.fecha_nacimiento,
-    j.edad_manual,
-    j.fecha_actualizacion_edad,
-    j.estado_espiritual,
-    j.estado_actividad,
-    j.fecha_ingreso
-";
-
-if ($filtro === "riesgo2") {
-
-    $query .= "
-    HAVING (
-        asistencias_mes_actual <= 1
-        OR faltas_recientes >= 3
-    )
-    AND NOT (
-        asistencias_mes_1 <= 1
-        AND asistencias_mes_2 <= 1
-    )
-    ";
-}
-
-if ($filtro === "riesgo3") {
-
-    $query .= "
-    HAVING (
-        asistencias_mes_1 <= 1
-        AND asistencias_mes_2 <= 1
-    )
-    ";
 }
 
 $query .= " ORDER BY j.nombre_completo ASC";
@@ -177,6 +104,24 @@ $stmt = $pdo->prepare($query);
 $stmt->execute();
 
 $jovenes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Riesgo / Alto riesgo: ya NO se calculan con una fórmula propia de esta
+// vista. Se reutiliza actividadService.php::estadoConexionJoven() (la misma
+// fuente central que ya usa el Dashboard), filtrando en PHP después de traer
+// la lista, para que el número de este listado y el del KPI del Dashboard
+// salgan siempre del mismo criterio.
+if ($filtro === "riesgo2" || $filtro === "riesgo3") {
+
+    $estadoBuscado = $filtro === "riesgo2" ? "Riesgo" : "Alto Riesgo";
+
+    $jovenes = array_values(array_filter(
+        $jovenes,
+        function (array $j) use ($pdo, $estadoBuscado): bool {
+            $conexion = estadoConexionJoven($pdo, (int) $j["id"]);
+            return $conexion["estado"] === $estadoBuscado;
+        }
+    ));
+}
 
 
 
@@ -354,6 +299,36 @@ require_once __DIR__ . "/../../includes/header.php";
             Alto riesgo
         </a>
 
+        <a
+            href="?filtro=nuevos"
+            class="jovenes__tag jovenes__tag--activos <?= $filtro === 'nuevos' ? 'jovenes__tag--active' : '' ?>"
+            title="Fecha de ingreso hace 3 meses o menos"
+        >
+            Nuevos (≤ 3 meses)
+        </a>
+
+        <a
+            href="?filtro=congregantes"
+            class="jovenes__tag jovenes__tag--activos <?= $filtro === 'congregantes' ? 'jovenes__tag--active' : '' ?>"
+        >
+            Congregantes
+        </a>
+
+        <a
+            href="?filtro=discipulado"
+            class="jovenes__tag jovenes__tag--activos <?= $filtro === 'discipulado' ? 'jovenes__tag--active' : '' ?>"
+        >
+            Discipulado
+        </a>
+
+        <a
+            href="?filtro=servidores_lideres"
+            class="jovenes__tag jovenes__tag--activos <?= $filtro === 'servidores_lideres' ? 'jovenes__tag--active' : '' ?>"
+            title="estado_espiritual = SERVIDOR o LIDER (provisional, no distingue ministerio todavía)"
+        >
+            Servidores/Líderes
+        </a>
+
     </div>
 
     <!-- BUSCADOR -->
@@ -443,22 +418,10 @@ require_once __DIR__ . "/../../includes/header.php";
             $años = floor($meses / 12);
             $restoMeses = $meses % 12;
 
-            $faltas = (int)$j["faltas_recientes"];
-
-            $mes0 = (int)($j["asistencias_mes_actual"] ?? 0);
-            $mes1 = (int)($j["asistencias_mes_1"] ?? 0);
-            $mes2 = (int)($j["asistencias_mes_2"] ?? 0);
-
-            $conexionReal = "ACTIVO";
-
-            if ($mes1 <= 1 && $mes2 <= 1) {
-
-                $conexionReal = "ALTO RIESGO";
-
-            } elseif ($mes0 <= 1 || $faltas >= 3) {
-
-                $conexionReal = "RIESGO";
-            }
+            // Misma fuente que el filtro de arriba y que el Dashboard:
+            // actividadService.php::estadoConexionJoven().
+            $conexion = estadoConexionJoven($pdo, (int) $j["id"]);
+            $conexionReal = $conexion["estado"];
 
             ?>
 
@@ -506,15 +469,20 @@ require_once __DIR__ . "/../../includes/header.php";
 
                 <?php
 
-                if ($conexionReal === "ALTO RIESGO") {
+                if ($conexionReal === "Alto Riesgo") {
 
-                    echo 'data-order="3">';
+                    echo 'data-order="4">';
                     echo '<span class="joven-riesgo3">Alto riesgo</span>';
 
-                } elseif ($conexionReal === "RIESGO") {
+                } elseif ($conexionReal === "Riesgo") {
+
+                    echo 'data-order="3">';
+                    echo '<span class="joven-riesgo2">Riesgo</span>';
+
+                } elseif ($conexionReal === "Observación") {
 
                     echo 'data-order="2">';
-                    echo '<span class="joven-riesgo2">Riesgo</span>';
+                    echo '<span class="joven-observacion">Observación</span>';
 
                 } else {
 

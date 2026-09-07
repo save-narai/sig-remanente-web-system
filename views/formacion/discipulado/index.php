@@ -16,14 +16,24 @@ if (!tienePermiso('gestionar_reuniones')) {
 |--------------------------------------------------------------------------
 |
 | El índice principal NO recibe ciclo_id.
-| Aquí se muestran todos los ciclos disponibles.
+| Aquí se muestran todos los ciclos disponibles, o solo los de un
+| estado si se pide por la URL (?estado=ACTIVO), reutilizando el
+| filtro que obtenerCiclosDiscipulado ya soportaba.
 |
 */
+
+$estadoFiltro = strtoupper((string)($_GET['estado'] ?? ''));
+
+$filtrosCiclos = [];
+
+if ($estadoFiltro !== '') {
+    $filtrosCiclos['estado'] = $estadoFiltro;
+}
 
 $ciclos = [];
 
 if (function_exists('obtenerCiclosDiscipulado')) {
-    $ciclos = obtenerCiclosDiscipulado($pdo);
+    $ciclos = obtenerCiclosDiscipulado($pdo, $filtrosCiclos);
 }
 
 if (!is_array($ciclos)) {
