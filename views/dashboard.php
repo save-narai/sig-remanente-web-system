@@ -42,178 +42,104 @@ $riesgo   = $data['riesgo'] ?? 0;
 $alto     = $data['alto'] ?? 0;
 
 /* =====================================================
-   CARDS
+   INDICADORES POR PANEL
+   -----------------------------------------------------
+   Cada indicador es "stat-card" (components/_stats.scss)
+   con una clase semántica (info/success/danger/warning/
+   purple). Los enlaces ya usan el esquema nuevo de
+   multi-filtro de jovenes/index.php (?estado=, ?riesgo[]=,
+   ?espiritu[]=, ?caracteristica[]=).
 ===================================================== */
 
-$secciones = [
+$jovenesUrl = BASE_URL . '/views/jovenes/index.php';
 
-    [
-        "titulo" => "Jóvenes",
-        "cards" => [
+$totalJovenesResumen = (int) ($resumen['totalJovenes'] ?? 0);
 
-            [
-                "titulo" => "Total Jóvenes",
-                "valor"  => $resumen['totalJovenes'] ?? 0,
-                "icono"  => "fa-users",
-                "extra"  => "Registrados",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=todos",
-                "enfasis" => true
-            ],
+$pct = function (int $valor) use ($totalJovenesResumen): ?string {
+    if ($totalJovenesResumen <= 0) {
+        return null;
+    }
+    return round(($valor / $totalJovenesResumen) * 100, 1) . '% del total';
+};
 
-            [
-                "titulo" => "Activos",
-                "valor"  => $resumen['activos'] ?? 0,
-                "icono"  => "fa-user-check",
-                "extra"  => "Actualmente",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=activos",
-                "enfasis" => true
-            ],
-
-            [
-                "titulo" => "Inactivos",
-                "valor"  => $resumen['inactivos'] ?? 0,
-                "icono"  => "fa-user-xmark",
-                "extra"  => "Sin actividad",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=inactivos"
-            ],
-
-            [
-                "titulo" => "Nuevos",
-                "valor"  => $resumen['nuevos'] ?? 0,
-                "icono"  => "fa-user-plus",
-                "extra"  => "Ingreso: últimos 3 meses",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=nuevos"
-            ],
-
-            [
-                "titulo" => "Antiguos",
-                "valor"  => $resumen['antiguos'] ?? 0,
-                "icono"  => "fa-user-clock",
-                "extra"  => "Ingreso: hace más de 3 meses",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=antiguos"
-            ]
-        ]
-    ],
-
-    [
-        "titulo" => "Actividad y riesgo",
-        "cards" => [
-
-            [
-                "titulo" => "En riesgo",
-                "valor"  => $riesgo,
-                "icono"  => "fa-triangle-exclamation",
-                "extra"  => "Baja asistencia reciente",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=riesgo2",
-                "enfasis" => true
-            ],
-
-            [
-                "titulo" => "Alto riesgo",
-                "valor"  => $alto,
-                "icono"  => "fa-circle-exclamation",
-                "extra"  => "2 meses sin asistir",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=riesgo3",
-                "enfasis" => true
-            ],
-
-            [
-                "titulo" => "Seguimiento pendiente",
-                "valor"  => $resumen['seguimientoPendiente'] ?? 0,
-                "icono"  => "fa-user-clock",
-                "extra"  => "Jóvenes nuevos sin asignar",
-                "href"   => BASE_URL . "/views/seguimientos/asignaciones.php?anio=" . date('Y') . "&mes=" . date('n')
-            ]
-        ]
-    ],
-
-    [
-        "titulo" => "Estado espiritual y ministerio",
-        "cards" => [
-
-            [
-                "titulo" => "Congregantes",
-                "valor"  => $resumen['porEstadoEspiritual']['congregante'] ?? 0,
-                "icono"  => "fa-church",
-                "extra"  => "Estado espiritual",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=congregantes"
-            ],
-
-            [
-                "titulo" => "Discipulado",
-                "valor"  => $resumen['porEstadoEspiritual']['discipulado'] ?? 0,
-                "icono"  => "fa-book-bible",
-                "extra"  => "Estado espiritual",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=discipulado"
-            ],
-
-            [
-                "titulo" => "Servidores/Líderes de Jóvenes",
-                "valor"  => $resumen['servidoresLideresJovenes'] ?? 0,
-                "icono"  => "fa-star",
-                "extra"  => "Provisional (estado espiritual)",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=servidores_lideres"
-            ],
-
-            // NOTA: esta tarjeta sigue viniendo de es_servidor, sin
-            // ningún cambio (ver informe: auditoría de es_servidor).
-            [
-                "titulo" => "Servidores (todos los ministerios)",
-                "valor"  => $resumen['servidores'] ?? 0,
-                "icono"  => "fa-hands-praying",
-                "extra"  => "Activos",
-                "href"   => BASE_URL . "/views/jovenes/index.php?filtro=servidores_todos_ministerios"
-            ]
-        ]
-    ],
-
-    [
-        "titulo" => "Formación / Discipulado",
-        "cards" => [
-
-            [
-                "titulo" => "Atención de discipulado",
-                "valor"  => $resumen['discipuladoAtencion'] ?? 0,
-                "icono"  => "fa-graduation-cap",
-                "extra"  => "Ciclos activos",
-                "href"   => BASE_URL . "/views/formacion/discipulado/index.php?estado=ACTIVO"
-            ],
-
-            [
-                "titulo" => "Ciclos de discipulado",
-                "valor"  => $resumen['ciclosDiscipuladoTotal'] ?? 0,
-                "icono"  => "fa-layer-group",
-                "extra"  => ($resumen['ciclosDiscipuladoActivos'] ?? 0) . " activos",
-                "href"   => BASE_URL . "/views/formacion/discipulado/index.php"
-            ]
-        ]
-    ],
-
-    [
-        "titulo" => "Reuniones y asistencia",
-        "cards" => [
-
-            [
-                "titulo" => "Reuniones",
-                "valor"  => $resumen['reuniones'] ?? 0,
-                "icono"  => "fa-calendar",
-                "extra"  => "Realizadas",
-                "href"   => BASE_URL . "/views/reuniones/index.php"
-            ],
-
-            // Sin "href": es un porcentaje/promedio, no representa un
-            // grupo de registros navegable (no hay una vista de
-            // "todas las asistencias" fuera de cada reunión
-            // individual).
-            [
-                "titulo" => "Asistencia",
-                "valor"  => ($resumen['asistencia'] ?? 0) . '%',
-                "icono"  => "fa-chart-line",
-                "extra"  => "Promedio"
-            ]
-        ]
-    ]
+$panelJovenes = [
+    ['titulo' => 'Total Jóvenes', 'valor' => $totalJovenesResumen, 'clase' => 'info', 'contexto' => 'Registrados', 'href' => $jovenesUrl . '?estado=todos'],
+    ['titulo' => 'Activos', 'valor' => $resumen['activos'] ?? 0, 'clase' => 'success', 'contexto' => $pct((int) ($resumen['activos'] ?? 0)), 'href' => $jovenesUrl . '?estado=activos'],
+    ['titulo' => 'Inactivos', 'valor' => $resumen['inactivos'] ?? 0, 'clase' => 'danger', 'contexto' => $pct((int) ($resumen['inactivos'] ?? 0)), 'href' => $jovenesUrl . '?estado=inactivos'],
+    ['titulo' => 'Nuevos ( 3 meses)', 'valor' => $resumen['nuevos'] ?? 0, 'clase' => 'purple', 'contexto' => $pct((int) ($resumen['nuevos'] ?? 0)), 'href' => $jovenesUrl . '?caracteristica[]=nuevos'],
+    ['titulo' => 'Antiguos', 'valor' => $resumen['antiguos'] ?? 0, 'clase' => 'info', 'contexto' => $pct((int) ($resumen['antiguos'] ?? 0)), 'href' => $jovenesUrl . '?caracteristica[]=antiguos'],
 ];
+
+// Panel de atención, ordenado por severidad (más urgente primero).
+// "Requieren atención (discipulado)" vive aquí, junto a las demás
+// señales de "esto necesita revisión humana" — distinto y
+// claramente diferenciado de "Ciclos activos" (panel de Ministerio).
+$panelAtencion = [
+    ['titulo' => 'Alto riesgo', 'valor' => $alto, 'clase' => 'danger', 'icono' => 'fa-circle-exclamation', 'href' => $jovenesUrl . '?riesgo[]=riesgo3'],
+    ['titulo' => 'En riesgo', 'valor' => $riesgo, 'clase' => 'warning', 'icono' => 'fa-triangle-exclamation', 'href' => $jovenesUrl . '?riesgo[]=riesgo2'],
+    ['titulo' => 'Seguimiento pendiente', 'valor' => $resumen['seguimientoPendiente'] ?? 0, 'clase' => 'info', 'icono' => 'fa-user-clock', 'href' => BASE_URL . '/views/seguimientos/asignaciones.php?anio=' . date('Y') . '&mes=' . date('n')],
+    ['titulo' => 'Requieren atención (discipulado)', 'valor' => $resumen['discipuladoAtencion'] ?? 0, 'clase' => 'purple', 'icono' => 'fa-graduation-cap', 'href' => BASE_URL . '/views/formacion/discipulado/index.php?estado=ACTIVO'],
+];
+
+// Ministerio/operación: Congregantes y Discipulado se depuraron de
+// aquí a propósito — ya están representados en la dona de Estado
+// espiritual de abajo; mostrarlos también como tarjeta sería
+// duplicar el mismo dato dos veces en la misma pantalla.
+$panelMinisterio = [
+    // Provisional: "estado_espiritual" no distingue todavía ministerio
+    // (ver auditoría de es_servidor); esta tarjeta y la siguiente
+    // representan cosas DISTINTAS a propósito, no se fusionan.
+    ['titulo' => 'Servidores/Líderes de Jóvenes', 'valor' => $resumen['servidoresLideresJovenes'] ?? 0, 'clase' => 'info', 'href' => $jovenesUrl . '?espiritu[]=servidores_lideres'],
+    ['titulo' => 'Servidores (todos los ministerios)', 'valor' => $resumen['servidores'] ?? 0, 'clase' => 'info', 'href' => $jovenesUrl . '?caracteristica[]=servidores_todos_ministerios'],
+    ['titulo' => 'Ciclos activos', 'valor' => $resumen['ciclosDiscipuladoActivos'] ?? 0, 'clase' => 'success', 'href' => BASE_URL . '/views/formacion/discipulado/index.php'],
+];
+
+$panelReuniones = [
+    ['titulo' => 'Reuniones realizadas', 'valor' => $resumen['reuniones'] ?? 0, 'clase' => 'info', 'href' => BASE_URL . '/views/reuniones/index.php'],
+    // Sin "href": es un promedio, no un grupo de registros navegable.
+    ['titulo' => 'Asistencia promedio', 'valor' => ($resumen['asistencia'] ?? 0) . '%', 'clase' => 'success', 'href' => null],
+];
+
+/* =====================================================
+   DONA DE ESTADO ESPIRITUAL (CSS puro, sin librerías)
+   -----------------------------------------------------
+   Las 5 categorías reales de jovenService.php
+   (ESTADOS_ESPIRITUALES). Se calculan los cortes del
+   conic-gradient a partir de datos reales; si no hay
+   ningún joven todavía, se muestra un círculo vacío
+   en vez de inventar proporciones.
+===================================================== */
+
+$distribucionEspiritual = [
+    ['clave' => 'nuevo', 'etiqueta' => 'Nuevo', 'color' => '#3b82f6'],
+    ['clave' => 'congregante', 'etiqueta' => 'Congregante', 'color' => '#22c55e'],
+    ['clave' => 'discipulado', 'etiqueta' => 'Discipulado', 'color' => '#a855f7'],
+    ['clave' => 'servidor', 'etiqueta' => 'Servidor', 'color' => '#f59e0b'],
+    ['clave' => 'lider', 'etiqueta' => 'Líder', 'color' => '#ec4899'],
+];
+
+$totalEspiritual = array_sum($resumen['porEstadoEspiritual'] ?? []);
+
+$acumulado = 0;
+$segmentosDona = [];
+
+foreach ($distribucionEspiritual as $categoria) {
+
+    $valor = (int) ($resumen['porEstadoEspiritual'][$categoria['clave']] ?? 0);
+
+    $porcentaje = $totalEspiritual > 0 ? ($valor / $totalEspiritual) * 100 : 0;
+
+    $inicio = $acumulado;
+    $acumulado += $porcentaje;
+
+    $segmentosDona[] = $categoria['color'] . ' ' . $inicio . '% ' . $acumulado . '%';
+
+    $distribucionEspiritual[array_search($categoria, $distribucionEspiritual)]['valor'] = $valor;
+}
+
+$gradienteDona = $totalEspiritual > 0
+    ? 'conic-gradient(' . implode(', ', $segmentosDona) . ')'
+    : 'conic-gradient(var(--border-color) 0% 100%)';
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -271,89 +197,156 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="page-content">
 
         <!-- =====================================================
-           ALERTA
+           JÓVENES — tira compacta (un solo contenedor, 5 segmentos)
         ===================================================== -->
 
-        <?php if ($alertas > 0): ?>
+        <div class="metric-strip">
 
-        <div class="alerta-dashboard">
+            <?php foreach ($panelJovenes as $item): ?>
 
-            <i class="fa-solid fa-triangle-exclamation"></i>
+            <?php $tag = !empty($item['href']) ? 'a' : 'div'; ?>
 
-            <?= $riesgo ?> en riesgo •
+            <<?= $tag ?>
+                class="metric-strip__item <?= htmlspecialchars($item['clase']) ?>"
+                <?= !empty($item['href']) ? 'href="' . htmlspecialchars($item['href']) . '"' : '' ?>
+            >
 
-            <?= $alto ?> en alto riesgo
+                <span class="metric-strip__value"><?= $item['valor'] ?></span>
+
+                <span class="metric-strip__label"><?= htmlspecialchars($item['titulo']) ?></span>
+
+                <?php if (!empty($item['contexto'])): ?>
+
+                <span class="metric-strip__contexto"><?= htmlspecialchars($item['contexto']) ?></span>
+
+                <?php endif; ?>
+
+            </<?= $tag ?>>
+
+            <?php endforeach; ?>
 
         </div>
 
-        <?php endif; ?>
-
         <!-- =====================================================
-           SECCIONES
+           FILA PRINCIPAL — Estado espiritual (dona grande) +
+           panel de atención jerarquizado, lado a lado
         ===================================================== -->
 
-        <?php foreach ($secciones as $seccion): ?>
+        <div class="dashboard-row">
+
+            <div class="page-section dashboard-row__dona">
+
+                <h2 class="page-section-title">
+                    Estado espiritual
+                </h2>
+
+                <div class="dona-panel">
+
+                    <div class="dona dona--grande" style="background:<?= $gradienteDona ?>">
+
+                        <div class="dona__hueco dona__hueco--grande">
+
+                            <span class="dona__total"><?= $totalEspiritual ?></span>
+
+                            <span class="dona__total-label">jóvenes</span>
+
+                        </div>
+
+                    </div>
+
+                    <ul class="dona__leyenda">
+
+                        <?php foreach ($distribucionEspiritual as $categoria): ?>
+
+                        <?php $porcentajeCategoria = $totalEspiritual > 0 ? round(($categoria['valor'] / $totalEspiritual) * 100, 1) : 0; ?>
+
+                        <li>
+
+                            <span class="dona__punto" style="background:<?= $categoria['color'] ?>"></span>
+
+                            <span class="dona__leyenda-etiqueta"><?= htmlspecialchars($categoria['etiqueta']) ?></span>
+
+                            <span class="dona__leyenda-barra">
+                                <span class="dona__leyenda-barra-relleno" style="width:<?= $porcentajeCategoria ?>%;background:<?= $categoria['color'] ?>"></span>
+                            </span>
+
+                            <span class="dona__leyenda-valor"><?= (int) $categoria['valor'] ?></span>
+
+                            <span class="dona__leyenda-porcentaje">
+                                <?= $totalEspiritual > 0 ? $porcentajeCategoria . '%' : '—' ?>
+                            </span>
+
+                        </li>
+
+                        <?php endforeach; ?>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+            <div class="page-section dashboard-row__atencion">
+
+                <h2 class="page-section-title">
+                    Actividad, riesgo y seguimiento
+                </h2>
+
+                <div class="attention-panel">
+
+                    <?php foreach ($panelAtencion as $item): ?>
+
+                    <?php $tag = !empty($item['href']) ? 'a' : 'div'; ?>
+
+                    <<?= $tag ?>
+                        class="attention-panel__row <?= htmlspecialchars($item['clase']) ?>"
+                        <?= !empty($item['href']) ? 'href="' . htmlspecialchars($item['href']) . '"' : '' ?>
+                    >
+
+                        <span class="attention-panel__icon">
+                            <i class="fa-solid <?= htmlspecialchars($item['icono']) ?>"></i>
+                        </span>
+
+                        <span class="attention-panel__label"><?= htmlspecialchars($item['titulo']) ?></span>
+
+                        <span class="attention-panel__value"><?= $item['valor'] ?></span>
+
+                    </<?= $tag ?>>
+
+                    <?php endforeach; ?>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================================
+           MINISTERIO / OPERACIÓN — 3 indicadores, menor jerarquía
+           (Congregantes/Discipulado ya están en la dona de arriba,
+           no se repiten aquí)
+        ===================================================== -->
 
         <div class="page-section">
 
             <h2 class="page-section-title">
-
-                <?= htmlspecialchars($seccion['titulo']) ?>
-
+                Ministerio y operación
             </h2>
 
-            <!-- =====================================================
-               CARDS
-            ===================================================== -->
+            <div class="stats-grid stats-grid--mini">
 
-            <div class="dashboard__cards">
+                <?php foreach ($panelMinisterio as $item): ?>
 
-                <?php foreach($seccion['cards'] as $card): ?>
-
-                <?php $tag = isset($card['href']) ? 'a' : 'div'; ?>
-
-                <?php
-                    $clases = 'dashboard__card';
-                    $clases .= isset($card['href']) ? ' dashboard__card--link' : '';
-                    $clases .= !empty($card['enfasis']) ? ' dashboard__card--enfasis' : '';
-                ?>
+                <?php $tag = !empty($item['href']) ? 'a' : 'div'; ?>
 
                 <<?= $tag ?>
-                    class="<?= $clases ?>"
-                    <?= isset($card['href']) ? 'href="' . htmlspecialchars($card['href']) . '"' : '' ?>
+                    class="stat-card stat-card--mini <?= htmlspecialchars($item['clase']) ?>"
+                    <?= !empty($item['href']) ? 'href="' . htmlspecialchars($item['href']) . '"' : '' ?>
                 >
 
-                    <div class="dashboard__card-top">
+                    <span class="stat-number"><?= $item['valor'] ?></span>
 
-                        <div class="dashboard__card-icon">
-
-                            <i class="fa-solid <?= $card['icono'] ?>"></i>
-
-                        </div>
-
-                        <div class="dashboard__card-title">
-
-                            <?= $card['titulo'] ?>
-
-                        </div>
-
-                    </div>
-
-                    <div class="dashboard__card-body">
-
-                        <div class="dashboard__card-value">
-
-                            <?= $card['valor'] ?>
-
-                        </div>
-
-                        <div class="dashboard__card-extra">
-
-                            <?= $card['extra'] ?>
-
-                        </div>
-
-                    </div>
+                    <span class="stat-label"><?= htmlspecialchars($item['titulo']) ?></span>
 
                 </<?= $tag ?>>
 
@@ -363,14 +356,35 @@ require_once __DIR__ . '/../includes/header.php';
 
         </div>
 
-        <?php endforeach; ?>
+        <!-- =====================================================
+           REUNIONES Y ASISTENCIA — tira compacta de cierre
+        ===================================================== -->
+
+        <div class="metric-strip metric-strip--cierre">
+
+            <?php foreach ($panelReuniones as $item): ?>
+
+            <?php $tag = !empty($item['href']) ? 'a' : 'div'; ?>
+
+            <<?= $tag ?>
+                class="metric-strip__item <?= htmlspecialchars($item['clase']) ?>"
+                <?= !empty($item['href']) ? 'href="' . htmlspecialchars($item['href']) . '"' : '' ?>
+            >
+
+                <span class="metric-strip__value"><?= $item['valor'] ?></span>
+
+                <span class="metric-strip__label"><?= htmlspecialchars($item['titulo']) ?></span>
+
+            </<?= $tag ?>>
+
+            <?php endforeach; ?>
+
+        </div>
 
     </div>
 
 </div>
 
 
-
-<script src="<?= BASE_URL ?>/assets/js/modulos/dashboard/dashboard.js"></script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

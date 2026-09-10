@@ -1,37 +1,227 @@
 
 /* =========================================================
-   PANEL DE FILTROS (agrupados)
+   PANEL DE FILTROS (multi-filtro: desplegables + chips)
+   ---------------------------------------------------------
+   Reutiliza .filter-chip / .filters-bar (ya definidos en
+   components/_filters.scss, usados hoy en Reuniones) para
+   los chips de filtros activos; lo único nuevo aquí es el
+   desplegable de cada grupo (<details>/<summary> nativos,
+   sin JS ni librería).
 ========================================================= */
 
-.jovenes__filtros-panel{
+.filters-panel{
 
     display:flex;
 
     flex-direction:column;
 
-    gap:14px;
+    gap:16px;
 
     margin:28px 0;
+
+    padding:20px;
+
+    background:var(--container);
+
+    border-radius:20px;
+
+    border:var(--border);
 }
 
-.jovenes__filtros-group{
+.filters-panel__form{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:16px;
+}
+
+.filters-panel__groups{
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:12px;
+}
+
+/* =========================================================
+   DESPLEGABLE POR GRUPO
+========================================================= */
+
+.filter-dropdown{
+
+    position:relative;
+
+    min-width:180px;
+}
+
+.filter-dropdown > summary{
 
     display:flex;
 
     align-items:center;
 
-    flex-wrap:wrap;
+    justify-content:space-between;
 
-    gap:14px;
+    gap:8px;
+
+    padding:10px 16px;
+
+    border-radius:12px;
+
+    border:var(--border);
+
+    background:var(--surface);
+
+    color:var(--text);
+
+    font-size:13px;
+
+    font-weight:700;
+
+    cursor:pointer;
+
+    list-style:none;
+
+    transition:var(--transition);
 }
 
-.jovenes__filtros-label{
+.filter-dropdown > summary::-webkit-details-marker{
 
-    flex-shrink:0;
+    display:none;
+}
 
-    width:150px;
+.filter-dropdown > summary:after{
 
-    font-size:.8rem;
+    content:"▾";
+
+    font-size:11px;
+
+    color:var(--text-soft);
+}
+
+.filter-dropdown[open] > summary{
+
+    border-color:var(--primary);
+
+    color:var(--primary);
+}
+
+.filter-dropdown__badge{
+
+    display:inline-flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    min-width:18px;
+
+    height:18px;
+
+    padding:0 5px;
+
+    border-radius:999px;
+
+    background:var(--primary);
+
+    color:#fff;
+
+    font-size:11px;
+
+    font-weight:700;
+}
+
+.filter-dropdown__body{
+
+    position:absolute;
+
+    top:calc(100% + 6px);
+
+    left:0;
+
+    z-index:20;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:4px;
+
+    min-width:240px;
+
+    padding:12px;
+
+    background:var(--container);
+
+    border-radius:14px;
+
+    border:var(--border);
+
+    box-shadow:var(--shadow-hover);
+}
+
+.filter-dropdown__option{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    padding:8px 10px;
+
+    border-radius:10px;
+
+    font-size:13px;
+
+    color:var(--text);
+
+    cursor:pointer;
+
+    transition:var(--transition);
+}
+
+.filter-dropdown__option:hover{
+
+    background:var(--surface);
+}
+
+/* =========================================================
+   ACCIONES (aplicar / limpiar)
+========================================================= */
+
+.filters-panel__actions{
+
+    display:flex;
+
+    gap:10px;
+}
+
+/* =========================================================
+   CHIPS DE FILTROS ACTIVOS
+========================================================= */
+
+.filters-panel__chips{
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    align-items:center;
+
+    gap:10px;
+
+    padding-top:14px;
+
+    border-top:var(--border);
+}
+
+.filters-panel__chips-label{
+
+    font-size:12px;
 
     font-weight:700;
 
@@ -40,148 +230,6 @@
     letter-spacing:.03em;
 
     color:var(--text-soft);
-}
-
-/* =========================================================
-   FILTROS
-========================================================= */
-
-.jovenes__filtros{
-
-    display:flex;
-
-    flex-wrap:wrap;
-
-    gap:14px;
-
-    margin:0;
-}
-
-/* =========================================================
-   TAG
-========================================================= */
-
-.jovenes__tag{
-
-    display:inline-flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    gap:8px;
-
-    padding:12px 18px;
-
-    border-radius:16px;
-
-    text-decoration:none;
-
-    font-size:13px;
-
-    font-weight:700;
-
-    transition:var(--transition);
-
-    border:1px solid transparent;
-
-    background:
-        rgba(255,255,255,.04);
-
-    color:var(--text-soft);
-
-    backdrop-filter:blur(10px);
-}
-
-/* =========================================================
-   TAG HOVER
-========================================================= */
-
-.jovenes__tag:hover{
-
-    transform:
-        translateY(-2px);
-
-    background:
-        rgba(255,255,255,.08);
-
-    color:var(--text);
-}
-
-/* =========================================================
-   TODOS
-========================================================= */
-
-.jovenes__tag--todos{
-
-    background:
-        rgba(255,255,255,.08);
-
-    color:var(--text);
-}
-
-/* =========================================================
-   ACTIVOS
-========================================================= */
-
-.jovenes__tag--activos{
-
-    background:
-        rgba(0,255,150,.12);
-
-    color:#00c27a;
-}
-
-/* =========================================================
-   INACTIVOS
-========================================================= */
-
-.jovenes__tag--inactivos{
-
-    background:
-        rgba(255,75,75,.12);
-
-    color:#ff5b5b;
-}
-
-/* =========================================================
-   RIESGO
-========================================================= */
-
-.jovenes__tag--riesgo{
-
-    background:
-        rgba(255,200,0,.12);
-
-    color:#d89b00;
-}
-
-/* =========================================================
-   ALTO RIESGO
-========================================================= */
-
-.jovenes__tag--alto{
-
-    background:
-        rgba(255,0,0,.14);
-
-    color:#ff4d4d;
-}
-
-/* =========================================================
-   ACTIVE
-========================================================= */
-
-.jovenes__tag--active{
-
-    background:var(--card-gradient);
-
-    color:#fff;
-
-    box-shadow:var(--shadow);
-
-    border-color:
-        rgba(255,255,255,.12);
 }
 
 /* =========================================================
@@ -302,24 +350,26 @@
 
 @media(max-width:768px){
 
-    .jovenes__filtros{
-
-        overflow:auto;
-
-        padding-bottom:6px;
-    }
-
-    .jovenes__filtros-group{
+    .filters-panel__groups{
 
         flex-direction:column;
-
-        align-items:flex-start;
-
-        gap:8px;
     }
 
-    .jovenes__filtros-label{
+    .filter-dropdown{
 
-        width:auto;
+        min-width:0;
+
+        width:100%;
+    }
+
+    .filter-dropdown__body{
+
+        position:static;
+
+        width:100%;
+
+        box-shadow:none;
+
+        margin-top:6px;
     }
 }

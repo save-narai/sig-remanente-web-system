@@ -163,4 +163,113 @@ document.addEventListener("DOMContentLoaded", () => {
 
         });
 
+    /* ======================================
+       PANEL DE FILTROS (multi-filtro)
+       - contador en vivo por grupo, antes
+         de aplicar (el servidor ya calcula
+         el conteo definitivo al recargar);
+       - "Eliminados" desactiva visualmente
+         los demás grupos, reforzando en la
+         interfaz la regla que el servidor
+         ya aplica igual si se ignora esto.
+    ====================================== */
+
+    const formFiltros = document.getElementById("formFiltrosJovenes");
+
+    if (formFiltros) {
+
+        const actualizarContadores = () => {
+
+            formFiltros
+                .querySelectorAll(".filter-dropdown")
+                .forEach(grupo => {
+
+                    const marcados = grupo.querySelectorAll(
+                        'input[type="checkbox"]:checked'
+                    ).length;
+
+                    const badge = grupo.querySelector("[data-count-badge]");
+
+                    if (marcados > 0) {
+
+                        if (badge) {
+
+                            badge.textContent = marcados;
+
+                        } else {
+
+                            const nuevoBadge = document.createElement("span");
+
+                            nuevoBadge.className = "filter-dropdown__badge";
+                            nuevoBadge.setAttribute("data-count-badge", "");
+                            nuevoBadge.textContent = marcados;
+
+                            grupo.querySelector("summary")?.appendChild(nuevoBadge);
+
+                        }
+
+                    } else if (badge) {
+
+                        badge.remove();
+
+                    }
+
+                });
+
+        };
+
+        const eliminadosRadio = formFiltros.querySelector(
+            'input[name="estado"][value="eliminados"]'
+        );
+
+        const otrosGrupos = formFiltros.querySelectorAll(
+            '[data-group="riesgo"], [data-group="espiritu"], [data-group="caracteristica"]'
+        );
+
+        const aplicarExclusividadEliminados = () => {
+
+            const activo = eliminadosRadio?.checked ?? false;
+
+            otrosGrupos.forEach(grupo => {
+
+                grupo
+                    .querySelectorAll('input[type="checkbox"]')
+                    .forEach(input => {
+
+                        input.disabled = activo;
+
+                        if (activo) {
+
+                            input.checked = false;
+
+                        }
+
+                    });
+
+            });
+
+            actualizarContadores();
+
+        };
+
+        formFiltros
+            .querySelectorAll('input[type="checkbox"]')
+            .forEach(input => {
+
+                input.addEventListener("change", actualizarContadores);
+
+            });
+
+        formFiltros
+            .querySelectorAll('input[name="estado"]')
+            .forEach(input => {
+
+                input.addEventListener("change", aplicarExclusividadEliminados);
+
+            });
+
+        aplicarExclusividadEliminados();
+
+    }
+
 });

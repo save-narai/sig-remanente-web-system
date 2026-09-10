@@ -13,34 +13,96 @@ if (!tienePermiso('gestionar_jovenes')) {
 
 generarCsrf();
 
-/* =========================
-   FILTROS
-========================= */
+/* =========================================================
+   FILTROS (multi-filtro real)
+   ---------------------------------------------------------
+   4 grupos independientes que se combinan entre sí con AND:
+   Estado (excluyente, un solo valor) · Actividad/Riesgo ·
+   Estado espiritual · Características (estos 3 últimos
+   admiten varios valores a la vez, combinados con OR dentro
+   del propio grupo). "Eliminados" es excluyente de todo lo
+   demás (papelera administrativa).
 
-$permitidos = [
-    "todos",
-    "activos",
-    "inactivos",
-    "eliminados",
-    "riesgo2",
-    "riesgo3",
-    "nuevos",
-    "antiguos",
-    "congregantes",
-    "discipulado",
-    "servidores_lideres",
-    "servidores_todos_ministerios"
-];
+   Compatibilidad: el antiguo ?filtro=X (un solo valor) sigue
+   funcionando — se traduce aquí mismo al esquema nuevo antes
+   de leer nada más, para no romper enlaces/marcadores ya
+   guardados. No se muestra ese formato en la interfaz nueva.
+========================================================= */
 
-$filtro = $_GET["filtro"] ?? "todos";
+if (
+    isset($_GET['filtro']) &&
+    !isset($_GET['estado']) &&
+    !isset($_GET['riesgo']) &&
+    !isset($_GET['espiritu']) &&
+    !isset($_GET['caracteristica'])
+) {
 
-if (!in_array($filtro, $permitidos)) {
-    $filtro = "todos";
+    $mapaFiltroAntiguo = [
+        'todos'                        => ['estado' => 'todos'],
+        'activos'                      => ['estado' => 'activos'],
+        'inactivos'                    => ['estado' => 'inactivos'],
+        'eliminados'                   => ['estado' => 'eliminados'],
+        'riesgo2'                      => ['riesgo' => ['riesgo2']],
+        'riesgo3'                      => ['riesgo' => ['riesgo3']],
+        'nuevos'                       => ['caracteristica' => ['nuevos']],
+        'antiguos'                     => ['caracteristica' => ['antiguos']],
+        'congregantes'                 => ['espiritu' => ['congregantes']],
+        'discipulado'                  => ['espiritu' => ['discipulado']],
+        'servidores_lideres'           => ['espiritu' => ['servidores_lideres']],
+        'servidores_todos_ministerios' => ['caracteristica' => ['servidores_todos_ministerios']]
+    ];
+
+    $legacy = (string) $_GET['filtro'];
+
+    if (isset($mapaFiltroAntiguo[$legacy])) {
+        $_GET = array_merge($_GET, $mapaFiltroAntiguo[$legacy]);
+    }
 }
 
-/* =========================
+$estadosPermitidos = ['todos', 'activos', 'inactivos', 'eliminados'];
+$riesgoPermitidos = ['riesgo2', 'riesgo3'];
+$espirituPermitidos = ['congregantes', 'discipulado', 'servidores_lideres'];
+$caracteristicaPermitidos = ['nuevos', 'antiguos', 'servidores_todos_ministerios'];
+
+$estado = (string) ($_GET['estado'] ?? 'todos');
+
+if (!in_array($estado, $estadosPermitidos, true)) {
+    $estado = 'todos';
+}
+
+$riesgoSeleccion = array_values(array_intersect(
+    (array) ($_GET['riesgo'] ?? []),
+    $riesgoPermitidos
+));
+
+$espirituSeleccion = array_values(array_intersect(
+    (array) ($_GET['espiritu'] ?? []),
+    $espirituPermitidos
+));
+
+$caracteristicaSeleccion = array_values(array_intersect(
+    (array) ($_GET['caracteristica'] ?? []),
+    $caracteristicaPermitidos
+));
+
+// "Eliminados" es excluyente: si está activo, se ignora cualquier
+// otro grupo seleccionado (no tiene sentido combinar la papelera
+// con riesgo/estado espiritual/características).
+if ($estado === 'eliminados') {
+    $riesgoSeleccion = [];
+    $espirituSeleccion = [];
+    $caracteristicaSeleccion = [];
+}
+
+$totalFiltrosActivos =
+    ($estado !== 'todos' ? 1 : 0) +
+    count($riesgoSeleccion) +
+    count($espirituSeleccion) +
+    count($caracteristicaSeleccion);
+
+/* =========================================================
    QUERY
-========================= */
+========================================================= */
 
 $query = "
 SELECT
@@ -58,61 +120,70 @@ FROM jovenes j
 
 $where = [];
 
-$where[] = "j.estado_actividad != 'ELIMINADO'";
+if ($estado === 'eliminados') {
 
-if ($filtro === "activos") {
-    $where[] = "j.estado_actividad = 'ACTIVO'";
+    $where[] = "j.estado_actividad = 'ELIMINADO'";
+
+} else {
+
+    $where[] = "j.estado_actividad != 'ELIMINADO'";
+
+    if ($estado === 'activos') {
+        $where[] = "j.estado_actividad = 'ACTIVO'";
+    }
+
+    if ($estado === 'inactivos') {
+        $where[] = "j.estado_actividad = 'INACTIVO'";
+    }
 }
 
-if ($filtro === "inactivos") {
-    $where[] = "j.estado_actividad = 'INACTIVO'";
+// Estado espiritual: mismas categorías de jovenService.php
+// (ESTADOS_ESPIRITUALES). Varios valores se combinan con OR
+// entre sí (ej. Congregantes O Discipulado), y ese grupo se
+// combina con AND respecto a los demás grupos.
+if (!empty($espirituSeleccion)) {
+
+    $condiciones = [];
+
+    if (in_array('congregantes', $espirituSeleccion, true)) {
+        $condiciones[] = "j.estado_espiritual = 'CONGREGANTE'";
+    }
+
+    if (in_array('discipulado', $espirituSeleccion, true)) {
+        $condiciones[] = "j.estado_espiritual = 'DISCIPULADO'";
+    }
+
+    if (in_array('servidores_lideres', $espirituSeleccion, true)) {
+        $condiciones[] = "j.estado_espiritual IN ('SERVIDOR', 'LIDER')";
+    }
+
+    $where[] = '(' . implode(' OR ', $condiciones) . ')';
 }
 
-if ($filtro === "eliminados") {
-    $where = ["j.estado_actividad = 'ELIMINADO'"];
+// Características: "nuevos"/"antiguos" mismo criterio exacto de
+// dashboardService.php::obtenerNuevosAntiguos(); "servidores de
+// cualquier ministerio" = es_servidor, sin relación con
+// estado_espiritual. Varios valores del grupo se combinan con OR.
+if (!empty($caracteristicaSeleccion)) {
+
+    $condiciones = [];
+
+    if (in_array('nuevos', $caracteristicaSeleccion, true)) {
+        $condiciones[] = "TIMESTAMPDIFF(MONTH, j.fecha_ingreso, CURDATE()) <= 3";
+    }
+
+    if (in_array('antiguos', $caracteristicaSeleccion, true)) {
+        $condiciones[] = "TIMESTAMPDIFF(MONTH, j.fecha_ingreso, CURDATE()) > 3";
+    }
+
+    if (in_array('servidores_todos_ministerios', $caracteristicaSeleccion, true)) {
+        $condiciones[] = "j.es_servidor = 1";
+    }
+
+    $where[] = '(' . implode(' OR ', $condiciones) . ')';
 }
 
-// "Nuevos": mismo criterio exacto que dashboardService.php::obtenerNuevosAntiguos()
-// (fecha_ingreso <= 3 meses). No existía ninguna función/consulta reutilizable
-// para el LISTADO (solo el conteo agregado del dashboard), así que se repite
-// aquí la misma condición TIMESTAMPDIFF, sin inventar un criterio distinto.
-if ($filtro === "nuevos") {
-    $where[] = "TIMESTAMPDIFF(MONTH, j.fecha_ingreso, CURDATE()) <= 3";
-}
-
-// "Antiguos": complemento exacto de "nuevos", mismo criterio de
-// dashboardService.php::obtenerNuevosAntiguos() (> 3 meses).
-if ($filtro === "antiguos") {
-    $where[] = "TIMESTAMPDIFF(MONTH, j.fecha_ingreso, CURDATE()) > 3";
-}
-
-// Congregantes / Discipulado / Servidores-Líderes: estado_espiritual tal cual,
-// las mismas categorías de jovenService.php (ESTADOS_ESPIRITUALES). No se
-// mezcla con es_servidor.
-if ($filtro === "congregantes") {
-    $where[] = "j.estado_espiritual = 'CONGREGANTE'";
-}
-
-if ($filtro === "discipulado") {
-    $where[] = "j.estado_espiritual = 'DISCIPULADO'";
-}
-
-if ($filtro === "servidores_lideres") {
-    $where[] = "j.estado_espiritual IN ('SERVIDOR', 'LIDER')";
-}
-
-// Servidores de CUALQUIER ministerio (es_servidor), a propósito
-// separado y sin relación con estado_espiritual — mismo campo que
-// ya usa la tarjeta "Servidores (todos los ministerios)" del
-// Dashboard y que actividadService.php usa para el criterio de
-// "maduro". No se toca su significado, solo se hace navegable.
-if ($filtro === "servidores_todos_ministerios") {
-    $where[] = "j.es_servidor = 1";
-}
-
-if (!empty($where)) {
-    $query .= " WHERE " . implode(" AND ", $where);
-}
+$query .= " WHERE " . implode(" AND ", $where);
 
 $query .= " ORDER BY j.nombre_completo ASC";
 
@@ -126,23 +197,93 @@ $jovenes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // vista. Se reutiliza actividadService.php::estadoConexionJoven() (la misma
 // fuente central que ya usa el Dashboard), filtrando en PHP después de traer
 // la lista, para que el número de este listado y el del KPI del Dashboard
-// salgan siempre del mismo criterio.
-if ($filtro === "riesgo2" || $filtro === "riesgo3") {
+// salgan siempre del mismo criterio. Varios valores del grupo (Riesgo,
+// Alto riesgo) se combinan con OR, igual que los demás grupos.
+if (!empty($riesgoSeleccion)) {
 
-    $estadoBuscado = $filtro === "riesgo2" ? "Riesgo" : "Alto Riesgo";
+    $estadosBuscados = [];
+
+    if (in_array('riesgo2', $riesgoSeleccion, true)) {
+        $estadosBuscados[] = 'Riesgo';
+    }
+
+    if (in_array('riesgo3', $riesgoSeleccion, true)) {
+        $estadosBuscados[] = 'Alto Riesgo';
+    }
 
     $jovenes = array_values(array_filter(
         $jovenes,
-        function (array $j) use ($pdo, $estadoBuscado): bool {
+        function (array $j) use ($pdo, $estadosBuscados): bool {
             $conexion = estadoConexionJoven($pdo, (int) $j["id"]);
-            return $conexion["estado"] === $estadoBuscado;
+            return in_array($conexion["estado"], $estadosBuscados, true);
         }
     ));
 }
 
 
 
+/* =========================================================
+   HELPERS DE URL PARA LOS CHIPS DE FILTROS ACTIVOS
+========================================================= */
+
+function jovenesUrlSinValor(
+    string $estado,
+    array $riesgo,
+    array $espiritu,
+    array $caracteristica,
+    string $grupo,
+    ?string $valor = null
+): string {
+
+    if ($grupo === 'estado') {
+        $estado = 'todos';
+    }
+
+    if ($grupo === 'riesgo' && $valor !== null) {
+        $riesgo = array_values(array_diff($riesgo, [$valor]));
+    }
+
+    if ($grupo === 'espiritu' && $valor !== null) {
+        $espiritu = array_values(array_diff($espiritu, [$valor]));
+    }
+
+    if ($grupo === 'caracteristica' && $valor !== null) {
+        $caracteristica = array_values(array_diff($caracteristica, [$valor]));
+    }
+
+    $parametros = ['estado' => $estado];
+
+    if (!empty($riesgo)) {
+        $parametros['riesgo'] = $riesgo;
+    }
+
+    if (!empty($espiritu)) {
+        $parametros['espiritu'] = $espiritu;
+    }
+
+    if (!empty($caracteristica)) {
+        $parametros['caracteristica'] = $caracteristica;
+    }
+
+    return '?' . http_build_query($parametros);
+}
+
 require_once __DIR__ . "/../../includes/header.php";
+
+$etiquetasFiltro = [
+    'activos' => 'Activos',
+    'inactivos' => 'Inactivos',
+    'eliminados' => 'Eliminados',
+    'riesgo2' => 'Riesgo',
+    'riesgo3' => 'Alto riesgo',
+    'congregantes' => 'Congregantes',
+    'discipulado' => 'Discipulado',
+    'servidores_lideres' => 'Servidores/Líderes',
+    'nuevos' => 'Nuevos (≤3 meses)',
+    'antiguos' => 'Antiguos',
+    'servidores_todos_ministerios' => 'Servidores (todos los ministerios)'
+];
+
 ?>
 
 <div class="page">
@@ -272,135 +413,197 @@ require_once __DIR__ . "/../../includes/header.php";
 
     <!-- FILTROS -->
 
-    <div class="jovenes__filtros-panel">
+    <div class="filters-panel">
 
-        <div class="jovenes__filtros-group">
+        <form method="GET" class="filters-panel__form" id="formFiltrosJovenes">
 
-            <span class="jovenes__filtros-label">Estado</span>
+            <div class="filters-panel__groups">
 
-            <div class="jovenes__filtros">
+                <details class="filter-dropdown">
 
-                <a
-                    href="?filtro=todos"
-                    class="jovenes__tag jovenes__tag--todos <?= $filtro === 'todos' ? 'jovenes__tag--active' : '' ?>"
-                >
-                    Todos
-                </a>
+                    <summary>
+                        Estado
+                        <?php if ($estado !== 'todos'): ?>
+                            <span class="filter-dropdown__badge" data-count-badge>1</span>
+                        <?php endif; ?>
+                    </summary>
 
-                <a
-                    href="?filtro=activos"
-                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'activos' ? 'jovenes__tag--active' : '' ?>"
-                >
-                    Activos
-                </a>
+                    <div class="filter-dropdown__body">
 
-                <a
-                    href="?filtro=inactivos"
-                    class="jovenes__tag jovenes__tag--inactivos <?= $filtro === 'inactivos' ? 'jovenes__tag--active' : '' ?>"
-                >
-                    Inactivos
-                </a>
+                        <label class="filter-dropdown__option">
+                            <input type="radio" name="estado" value="todos" <?= $estado === 'todos' ? 'checked' : '' ?>>
+                            Todos
+                        </label>
 
-                <a
-                    href="?filtro=eliminados"
-                    class="jovenes__tag jovenes__tag--inactivos <?= $filtro === 'eliminados' ? 'jovenes__tag--active' : '' ?>"
-                >
-                    Eliminados
-                </a>
+                        <label class="filter-dropdown__option">
+                            <input type="radio" name="estado" value="activos" <?= $estado === 'activos' ? 'checked' : '' ?>>
+                            Activos
+                        </label>
+
+                        <label class="filter-dropdown__option">
+                            <input type="radio" name="estado" value="inactivos" <?= $estado === 'inactivos' ? 'checked' : '' ?>>
+                            Inactivos
+                        </label>
+
+                        <label class="filter-dropdown__option">
+                            <input type="radio" name="estado" value="eliminados" <?= $estado === 'eliminados' ? 'checked' : '' ?>>
+                            Eliminados
+                        </label>
+
+                    </div>
+
+                </details>
+
+                <details class="filter-dropdown" <?= !empty($riesgoSeleccion) ? 'open' : '' ?>>
+
+                    <summary>
+                        Actividad / Riesgo
+                        <?php if (!empty($riesgoSeleccion)): ?>
+                            <span class="filter-dropdown__badge" data-count-badge><?= count($riesgoSeleccion) ?></span>
+                        <?php endif; ?>
+                    </summary>
+
+                    <div class="filter-dropdown__body" data-group="riesgo">
+
+                        <label class="filter-dropdown__option">
+                            <input type="checkbox" name="riesgo[]" value="riesgo2" <?= in_array('riesgo2', $riesgoSeleccion, true) ? 'checked' : '' ?>>
+                            Riesgo
+                        </label>
+
+                        <label class="filter-dropdown__option">
+                            <input type="checkbox" name="riesgo[]" value="riesgo3" <?= in_array('riesgo3', $riesgoSeleccion, true) ? 'checked' : '' ?>>
+                            Alto riesgo
+                        </label>
+
+                    </div>
+
+                </details>
+
+                <details class="filter-dropdown" <?= !empty($espirituSeleccion) ? 'open' : '' ?>>
+
+                    <summary>
+                        Estado espiritual
+                        <?php if (!empty($espirituSeleccion)): ?>
+                            <span class="filter-dropdown__badge" data-count-badge><?= count($espirituSeleccion) ?></span>
+                        <?php endif; ?>
+                    </summary>
+
+                    <div class="filter-dropdown__body" data-group="espiritu">
+
+                        <label class="filter-dropdown__option">
+                            <input type="checkbox" name="espiritu[]" value="congregantes" <?= in_array('congregantes', $espirituSeleccion, true) ? 'checked' : '' ?>>
+                            Congregantes
+                        </label>
+
+                        <label class="filter-dropdown__option">
+                            <input type="checkbox" name="espiritu[]" value="discipulado" <?= in_array('discipulado', $espirituSeleccion, true) ? 'checked' : '' ?>>
+                            Discipulado
+                        </label>
+
+                        <label class="filter-dropdown__option" title="estado_espiritual = SERVIDOR o LIDER (provisional, no distingue ministerio todavía)">
+                            <input type="checkbox" name="espiritu[]" value="servidores_lideres" <?= in_array('servidores_lideres', $espirituSeleccion, true) ? 'checked' : '' ?>>
+                            Servidores/Líderes
+                        </label>
+
+                    </div>
+
+                </details>
+
+                <details class="filter-dropdown" <?= !empty($caracteristicaSeleccion) ? 'open' : '' ?>>
+
+                    <summary>
+                        Características
+                        <?php if (!empty($caracteristicaSeleccion)): ?>
+                            <span class="filter-dropdown__badge" data-count-badge><?= count($caracteristicaSeleccion) ?></span>
+                        <?php endif; ?>
+                    </summary>
+
+                    <div class="filter-dropdown__body" data-group="caracteristica">
+
+                        <label class="filter-dropdown__option" title="Fecha de ingreso hace 3 meses o menos">
+                            <input type="checkbox" name="caracteristica[]" value="nuevos" <?= in_array('nuevos', $caracteristicaSeleccion, true) ? 'checked' : '' ?>>
+                            Nuevos (últimos 3 meses)
+                        </label>
+
+                        <label class="filter-dropdown__option" title="Fecha de ingreso hace más de 3 meses">
+                            <input type="checkbox" name="caracteristica[]" value="antiguos" <?= in_array('antiguos', $caracteristicaSeleccion, true) ? 'checked' : '' ?>>
+                            Antiguos
+                        </label>
+
+                        <label class="filter-dropdown__option" title="es_servidor = Sí, de cualquier ministerio">
+                            <input type="checkbox" name="caracteristica[]" value="servidores_todos_ministerios" <?= in_array('servidores_todos_ministerios', $caracteristicaSeleccion, true) ? 'checked' : '' ?>>
+                            Servidores (todos los ministerios)
+                        </label>
+
+                    </div>
+
+                </details>
 
             </div>
 
-        </div>
+            <div class="filters-panel__actions">
 
-        <div class="jovenes__filtros-group">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    Aplicar filtros
+                </button>
 
-            <span class="jovenes__filtros-label">Actividad / Riesgo</span>
-
-            <div class="jovenes__filtros">
-
-                <a
-                    href="?filtro=riesgo2"
-                    class="jovenes__tag jovenes__tag--riesgo <?= $filtro === 'riesgo2' ? 'jovenes__tag--active' : '' ?>"
-                >
-                    Riesgo
-                </a>
-
-                <a
-                    href="?filtro=riesgo3"
-                    class="jovenes__tag jovenes__tag--alto <?= $filtro === 'riesgo3' ? 'jovenes__tag--active' : '' ?>"
-                >
-                    Alto riesgo
-                </a>
+                <?php if ($totalFiltrosActivos > 0): ?>
+                    <a href="?" class="btn btn-back btn-sm">
+                        Limpiar todo
+                    </a>
+                <?php endif; ?>
 
             </div>
 
+        </form>
+
+        <?php if ($totalFiltrosActivos > 0): ?>
+
+        <div class="filters-panel__chips">
+
+            <span class="filters-panel__chips-label">
+                <?= $totalFiltrosActivos ?> filtro<?= $totalFiltrosActivos > 1 ? 's' : '' ?> activo<?= $totalFiltrosActivos > 1 ? 's' : '' ?>:
+            </span>
+
+            <?php if ($estado !== 'todos'): ?>
+                <a
+                    class="filter-chip filter-chip--active"
+                    href="<?= jovenesUrlSinValor($estado, $riesgoSeleccion, $espirituSeleccion, $caracteristicaSeleccion, 'estado') ?>"
+                >
+                    <?= $etiquetasFiltro[$estado] ?? ucfirst($estado) ?> ✕
+                </a>
+            <?php endif; ?>
+
+            <?php foreach ($riesgoSeleccion as $valor): ?>
+                <a
+                    class="filter-chip filter-chip--danger"
+                    href="<?= jovenesUrlSinValor($estado, $riesgoSeleccion, $espirituSeleccion, $caracteristicaSeleccion, 'riesgo', $valor) ?>"
+                >
+                    <?= $etiquetasFiltro[$valor] ?? $valor ?> ✕
+                </a>
+            <?php endforeach; ?>
+
+            <?php foreach ($espirituSeleccion as $valor): ?>
+                <a
+                    class="filter-chip filter-chip--active"
+                    href="<?= jovenesUrlSinValor($estado, $riesgoSeleccion, $espirituSeleccion, $caracteristicaSeleccion, 'espiritu', $valor) ?>"
+                >
+                    <?= $etiquetasFiltro[$valor] ?? $valor ?> ✕
+                </a>
+            <?php endforeach; ?>
+
+            <?php foreach ($caracteristicaSeleccion as $valor): ?>
+                <a
+                    class="filter-chip filter-chip--default"
+                    href="<?= jovenesUrlSinValor($estado, $riesgoSeleccion, $espirituSeleccion, $caracteristicaSeleccion, 'caracteristica', $valor) ?>"
+                >
+                    <?= $etiquetasFiltro[$valor] ?? $valor ?> ✕
+                </a>
+            <?php endforeach; ?>
+
         </div>
 
-        <div class="jovenes__filtros-group">
-
-            <span class="jovenes__filtros-label">Estado espiritual</span>
-
-            <div class="jovenes__filtros">
-
-                <a
-                    href="?filtro=congregantes"
-                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'congregantes' ? 'jovenes__tag--active' : '' ?>"
-                >
-                    Congregantes
-                </a>
-
-                <a
-                    href="?filtro=discipulado"
-                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'discipulado' ? 'jovenes__tag--active' : '' ?>"
-                >
-                    Discipulado
-                </a>
-
-                <a
-                    href="?filtro=servidores_lideres"
-                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'servidores_lideres' ? 'jovenes__tag--active' : '' ?>"
-                    title="estado_espiritual = SERVIDOR o LIDER (provisional, no distingue ministerio todavía)"
-                >
-                    Servidores/Líderes
-                </a>
-
-            </div>
-
-        </div>
-
-        <div class="jovenes__filtros-group">
-
-            <span class="jovenes__filtros-label">Características</span>
-
-            <div class="jovenes__filtros">
-
-                <a
-                    href="?filtro=nuevos"
-                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'nuevos' ? 'jovenes__tag--active' : '' ?>"
-                    title="Fecha de ingreso hace 3 meses o menos"
-                >
-                    Nuevos (últimos 3 meses)
-                </a>
-
-                <a
-                    href="?filtro=antiguos"
-                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'antiguos' ? 'jovenes__tag--active' : '' ?>"
-                    title="Fecha de ingreso hace más de 3 meses"
-                >
-                    Antiguos
-                </a>
-
-                <a
-                    href="?filtro=servidores_todos_ministerios"
-                    class="jovenes__tag jovenes__tag--activos <?= $filtro === 'servidores_todos_ministerios' ? 'jovenes__tag--active' : '' ?>"
-                    title="es_servidor = Sí, de cualquier ministerio"
-                >
-                    Servidores (todos los ministerios)
-                </a>
-
-            </div>
-
-        </div>
+        <?php endif; ?>
 
     </div>
 
@@ -804,6 +1007,62 @@ require_once __DIR__ . "/../../includes/header.php";
 <script>
 
 document.addEventListener("DOMContentLoaded", () => {
+
+    /* =====================================
+       CONTADOR EN VIVO DE FILTROS (por grupo)
+       -------------------------------------
+       Solo actualiza el numerito del <summary>
+       mientras se marca/desmarca, antes de
+       "Aplicar filtros". No cambia la consulta;
+       eso lo sigue haciendo el servidor al
+       enviar el formulario.
+    ===================================== */
+
+    document
+        .querySelectorAll(".filter-dropdown__body[data-group]")
+        .forEach(grupo => {
+
+            const detalle = grupo.closest(".filter-dropdown");
+            const resumen = detalle?.querySelector("summary");
+
+            if (!resumen) {
+                return;
+            }
+
+            const actualizarBadge = () => {
+
+                const marcados = grupo.querySelectorAll(
+                    "input[type=checkbox]:checked"
+                ).length;
+
+                let badge = resumen.querySelector("[data-count-badge]");
+
+                if (marcados === 0) {
+
+                    badge?.remove();
+                    return;
+                }
+
+                if (!badge) {
+
+                    badge = document.createElement("span");
+                    badge.className = "filter-dropdown__badge";
+                    badge.setAttribute("data-count-badge", "");
+                    resumen.appendChild(badge);
+                }
+
+                badge.textContent = String(marcados);
+            };
+
+            grupo
+                .querySelectorAll("input[type=checkbox]")
+                .forEach(input => {
+
+                    input.addEventListener("change", actualizarBadge);
+
+                });
+
+        });
 
     /* =====================================
        DATATABLE

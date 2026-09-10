@@ -48,39 +48,6 @@ function actualizarEstadoActividad(PDO $pdo): void
     ");
 
     $stmt->execute();
-
-    /* ELIMINAR MAYORES DE 28 */
-
-    $stmt = $pdo->prepare("
-        UPDATE jovenes
-
-        SET estado_actividad = 'ELIMINADO'
-
-        WHERE estado_actividad != 'ELIMINADO'
-
-        AND (
-
-            (
-                fecha_nacimiento IS NOT NULL
-
-                AND TIMESTAMPDIFF(
-                    YEAR,
-                    fecha_nacimiento,
-                    CURDATE()
-                ) >= 28
-            )
-
-            OR
-
-            (
-                fecha_nacimiento IS NULL
-
-                AND edad_manual >= 28
-            )
-        )
-    ");
-
-    $stmt->execute();
 }
 
 
