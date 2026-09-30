@@ -69,8 +69,8 @@ $panelJovenes = [
     ['titulo' => 'Total Jóvenes', 'valor' => $totalJovenesResumen, 'clase' => 'info', 'contexto' => 'Registrados', 'href' => $jovenesUrl . '?estado=todos'],
     ['titulo' => 'Activos', 'valor' => $resumen['activos'] ?? 0, 'clase' => 'success', 'contexto' => $pct((int) ($resumen['activos'] ?? 0)), 'href' => $jovenesUrl . '?estado=activos'],
     ['titulo' => 'Inactivos', 'valor' => $resumen['inactivos'] ?? 0, 'clase' => 'danger', 'contexto' => $pct((int) ($resumen['inactivos'] ?? 0)), 'href' => $jovenesUrl . '?estado=inactivos'],
-    ['titulo' => 'Nuevos (≤3 meses)', 'valor' => $resumen['nuevos'] ?? 0, 'clase' => 'purple', 'contexto' => $pct((int) ($resumen['nuevos'] ?? 0)), 'href' => $jovenesUrl . '?caracteristica[]=nuevos'],
-    ['titulo' => 'Antiguos (>3 meses)', 'valor' => $resumen['antiguos'] ?? 0, 'clase' => 'info', 'contexto' => $pct((int) ($resumen['antiguos'] ?? 0)), 'href' => $jovenesUrl . '?caracteristica[]=antiguos'],
+    ['titulo' => 'Nuevos (meses)', 'valor' => $resumen['nuevos'] ?? 0, 'clase' => 'purple', 'contexto' => $pct((int) ($resumen['nuevos'] ?? 0)), 'href' => $jovenesUrl . '?caracteristica[]=nuevos'],
+    ['titulo' => 'Antiguos (meses)', 'valor' => $resumen['antiguos'] ?? 0, 'clase' => 'info', 'contexto' => $pct((int) ($resumen['antiguos'] ?? 0)), 'href' => $jovenesUrl . '?caracteristica[]=antiguos'],
 ];
 
 // Panel de atención, ordenado por severidad (más urgente primero).
