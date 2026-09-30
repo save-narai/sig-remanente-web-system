@@ -212,6 +212,10 @@ require_once __DIR__ . "/../../includes/header.php";
                     required
                 >
 
+                <p class="form-hint">
+                    El estado congregacional (Nuevo/Congregante) se calcula automáticamente a partir de esta fecha -- no es un campo manual.
+                </p>
+
             </div>
 
             <!-- GÉNERO -->
@@ -244,70 +248,32 @@ require_once __DIR__ . "/../../includes/header.php";
 
             </div>
 
-            <!-- ESTADO ESPIRITUAL -->
-
-            <div class="form-group">
-
-                <label class="form-label">
-                    Estado Espiritual
-                </label>
-
-                <select
-                    class="form-select"
-                    name="estado_espiritual"
-                    required
-                >
-
-                    <option value="">
-                        Seleccionar
-                    </option>
-
-                    <option value="NUEVO">
-                        Nuevo
-                    </option>
-
-                    <option value="CONGREGANTE">
-                        Congregante
-                    </option>
-
-                    <option value="DISCIPULADO">
-                        Discipulado
-                    </option>
-
-                    <option value="SERVIDOR">
-                        Servidor
-                    </option>
-
-                    <option value="LIDER">
-                        Líder
-                    </option>
-
-                </select>
-
-            </div>
-
-            <!-- SERVIDOR -->
+            <!-- SERVIDOR: campo manual retirado (Fase 8 -- pulido).
+                 La condición de servidor del Ministerio de Jóvenes ya
+                 no se establece aquí; proviene del vínculo con
+                 Usuarios (jovenes.usuario_id) que implementamos en la
+                 Fase 6. La columna es_servidor sigue existiendo en la
+                 base de datos (servidor de OTRO ministerio) pero deja
+                 de ser un campo del formulario -- ya no corresponde
+                 recolectarlo manualmente aquí. -->
 
             <div class="form-group form-group-full">
 
                 <label class="form-label">
-                    ¿Es servidor?
+                    Observaciones
                 </label>
 
-                <select
-                    class="form-select"
-                    name="es_servidor"
-                >
+                <textarea
+                    class="form-textarea"
+                    name="observaciones"
+                    rows="4"
+                    maxlength="2000"
+                    placeholder="Ej: llegó invitado por un amigo, llegó por evangelización en el parque, llegó por el concierto de jóvenes..."
+                ></textarea>
 
-                    <option value="0">
-                        No
-                    </option>
-
-                    <option value="1">
-                        Sí
-                    </option>
-
-                </select>
+                <p class="form-hint">
+                    Opcional -- útil especialmente para registrar cómo llegó el joven al ministerio (evangelización, invitado, evento, etc.). Se puede editar después desde su perfil.
+                </p>
 
             </div>
 

@@ -37,9 +37,12 @@ $graficas = $data['graficas'] ?? [
     'estado'  => []
 ];
 
-$alertas = $data['alertas'] ?? 0;
-$riesgo   = $data['riesgo'] ?? 0;
-$alto     = $data['alto'] ?? 0;
+// Modelo único de actividad juvenil (4/12 ausencias consecutivas
+// demostrables). El antiguo desglose Riesgo/Alto riesgo (umbrales
+// 3/4 propios, solo "Grupo Conexión") fue retirado: "Inactivos" ya
+// se muestra en el panel de jóvenes (dato persistido) y "Alerta" es
+// la única categoría intermedia que existe en el modelo confirmado.
+$alerta = $data['alerta'] ?? 0;
 
 /* =====================================================
    INDICADORES POR PANEL
@@ -66,8 +69,8 @@ $panelJovenes = [
     ['titulo' => 'Total Jóvenes', 'valor' => $totalJovenesResumen, 'clase' => 'info', 'contexto' => 'Registrados', 'href' => $jovenesUrl . '?estado=todos'],
     ['titulo' => 'Activos', 'valor' => $resumen['activos'] ?? 0, 'clase' => 'success', 'contexto' => $pct((int) ($resumen['activos'] ?? 0)), 'href' => $jovenesUrl . '?estado=activos'],
     ['titulo' => 'Inactivos', 'valor' => $resumen['inactivos'] ?? 0, 'clase' => 'danger', 'contexto' => $pct((int) ($resumen['inactivos'] ?? 0)), 'href' => $jovenesUrl . '?estado=inactivos'],
-    ['titulo' => 'Nuevos ( 3 meses)', 'valor' => $resumen['nuevos'] ?? 0, 'clase' => 'purple', 'contexto' => $pct((int) ($resumen['nuevos'] ?? 0)), 'href' => $jovenesUrl . '?caracteristica[]=nuevos'],
-    ['titulo' => 'Antiguos', 'valor' => $resumen['antiguos'] ?? 0, 'clase' => 'info', 'contexto' => $pct((int) ($resumen['antiguos'] ?? 0)), 'href' => $jovenesUrl . '?caracteristica[]=antiguos'],
+    ['titulo' => 'Nuevos (≤3 meses)', 'valor' => $resumen['nuevos'] ?? 0, 'clase' => 'purple', 'contexto' => $pct((int) ($resumen['nuevos'] ?? 0)), 'href' => $jovenesUrl . '?caracteristica[]=nuevos'],
+    ['titulo' => 'Antiguos (>3 meses)', 'valor' => $resumen['antiguos'] ?? 0, 'clase' => 'info', 'contexto' => $pct((int) ($resumen['antiguos'] ?? 0)), 'href' => $jovenesUrl . '?caracteristica[]=antiguos'],
 ];
 
 // Panel de atención, ordenado por severidad (más urgente primero).
@@ -75,8 +78,7 @@ $panelJovenes = [
 // señales de "esto necesita revisión humana" — distinto y
 // claramente diferenciado de "Ciclos activos" (panel de Ministerio).
 $panelAtencion = [
-    ['titulo' => 'Alto riesgo', 'valor' => $alto, 'clase' => 'danger', 'icono' => 'fa-circle-exclamation', 'href' => $jovenesUrl . '?riesgo[]=riesgo3'],
-    ['titulo' => 'En riesgo', 'valor' => $riesgo, 'clase' => 'warning', 'icono' => 'fa-triangle-exclamation', 'href' => $jovenesUrl . '?riesgo[]=riesgo2'],
+    ['titulo' => 'Alerta (4-11 ausencias)', 'valor' => $alerta, 'clase' => 'warning', 'icono' => 'fa-triangle-exclamation', 'href' => $jovenesUrl . '?riesgo[]=alerta'],
     ['titulo' => 'Seguimiento pendiente', 'valor' => $resumen['seguimientoPendiente'] ?? 0, 'clase' => 'info', 'icono' => 'fa-user-clock', 'href' => BASE_URL . '/views/seguimientos/asignaciones.php?anio=' . date('Y') . '&mes=' . date('n')],
     ['titulo' => 'Requieren atención (discipulado)', 'valor' => $resumen['discipuladoAtencion'] ?? 0, 'clase' => 'purple', 'icono' => 'fa-graduation-cap', 'href' => BASE_URL . '/views/formacion/discipulado/index.php?estado=ACTIVO'],
 ];
@@ -86,12 +88,11 @@ $panelAtencion = [
 // espiritual de abajo; mostrarlos también como tarjeta sería
 // duplicar el mismo dato dos veces en la misma pantalla.
 $panelMinisterio = [
-    // Provisional: "estado_espiritual" no distingue todavía ministerio
-    // (ver auditoría de es_servidor); esta tarjeta y la siguiente
-    // representan cosas DISTINTAS a propósito, no se fusionan.
-    ['titulo' => 'Servidores/Líderes de Jóvenes', 'valor' => $resumen['servidoresLideresJovenes'] ?? 0, 'clase' => 'info', 'href' => $jovenesUrl . '?espiritu[]=servidores_lideres'],
-    ['titulo' => 'Servidores (todos los ministerios)', 'valor' => $resumen['servidores'] ?? 0, 'clase' => 'info', 'href' => $jovenesUrl . '?caracteristica[]=servidores_todos_ministerios'],
-    ['titulo' => 'Ciclos activos', 'valor' => $resumen['ciclosDiscipuladoActivos'] ?? 0, 'clase' => 'success', 'href' => BASE_URL . '/views/formacion/discipulado/index.php'],
+    // Servidores = usuarios activos registrados en la plataforma
+    // (administradora, líder, sublíder, usuarios independientes).
+    // Ya no se cuenta desde la ficha de los jóvenes.
+    ['titulo' => 'Servidores del Ministerio', 'valor' => $resumen['servidoresLideresJovenes'] ?? 0, 'clase' => 'info', 'href' => BASE_URL . '/views/usuarios/index.php'],
+    ['titulo' => 'Ciclos activos', 'valor' => $resumen['ciclosDiscipuladoActivos'] ?? 0, 'clase' => 'success', 'href' => BASE_URL . '/views/formacion/discipulado/index.php?estado=ACTIVO'],
 ];
 
 $panelReuniones = [
@@ -101,21 +102,21 @@ $panelReuniones = [
 ];
 
 /* =====================================================
-   DONA DE ESTADO ESPIRITUAL (CSS puro, sin librerías)
+   DONA DE ESTADO CONGREGACIONAL (CSS puro, sin librerías)
    -----------------------------------------------------
-   Las 5 categorías reales de jovenService.php
-   (ESTADOS_ESPIRITUALES). Se calculan los cortes del
-   conic-gradient a partir de datos reales; si no hay
-   ningún joven todavía, se muestra un círculo vacío
-   en vez de inventar proporciones.
+   Fase 6: ya NO son 5 categorías -- jovenes.estado_espiritual
+   quedó restringido a NUEVO/CONGREGANTE (jovenService.php
+   ESTADOS_CONGREGACIONALES). Discipulado y Servidor/Líder ya
+   no viven aquí (ver tarjeta "Servidores del Ministerio de
+   Jóvenes" más abajo, ahora desde Usuarios). Se calculan los
+   cortes del conic-gradient a partir de datos reales; si no
+   hay ningún joven todavía, se muestra un círculo vacío en
+   vez de inventar proporciones.
 ===================================================== */
 
 $distribucionEspiritual = [
-    ['clave' => 'nuevo', 'etiqueta' => 'Nuevo', 'color' => '#3b82f6'],
-    ['clave' => 'congregante', 'etiqueta' => 'Congregante', 'color' => '#22c55e'],
-    ['clave' => 'discipulado', 'etiqueta' => 'Discipulado', 'color' => '#a855f7'],
-    ['clave' => 'servidor', 'etiqueta' => 'Servidor', 'color' => '#f59e0b'],
-    ['clave' => 'lider', 'etiqueta' => 'Líder', 'color' => '#ec4899'],
+    ['clave' => 'nuevo', 'etiqueta' => 'Nuevo', 'color' => '#3b82f6', 'filtro' => 'nuevo_espiritual'],
+    ['clave' => 'congregante', 'etiqueta' => 'Congregante', 'color' => '#22c55e', 'filtro' => 'congregantes'],
 ];
 
 $totalEspiritual = array_sum($resumen['porEstadoEspiritual'] ?? []);
@@ -262,6 +263,12 @@ require_once __DIR__ . '/../includes/header.php';
 
                         <li>
 
+                        <?php if (!empty($categoria['filtro'])): ?>
+                            <a class="dona__leyenda-link" href="<?= htmlspecialchars($jovenesUrl . '?espiritu[]=' . $categoria['filtro']) ?>">
+                        <?php else: ?>
+                            <span class="dona__leyenda-link">
+                        <?php endif; ?>
+
                             <span class="dona__punto" style="background:<?= $categoria['color'] ?>"></span>
 
                             <span class="dona__leyenda-etiqueta"><?= htmlspecialchars($categoria['etiqueta']) ?></span>
@@ -275,6 +282,8 @@ require_once __DIR__ . '/../includes/header.php';
                             <span class="dona__leyenda-porcentaje">
                                 <?= $totalEspiritual > 0 ? $porcentajeCategoria . '%' : '—' ?>
                             </span>
+
+                        <?= !empty($categoria['filtro']) ? '</a>' : '</span>' ?>
 
                         </li>
 
@@ -326,6 +335,98 @@ require_once __DIR__ . '/../includes/header.php';
            (Congregantes/Discipulado ya están en la dona de arriba,
            no se repiten aquí)
         ===================================================== -->
+
+        <?php if (!empty($cumpleanosPanel)): ?>
+
+        <!-- =====================================================
+             CUMPLEAÑOS (solo para usuarios marcados para recibir
+             la alerta) -- hoy y próximos 7 días
+        ====================================================== -->
+
+        <div class="page-section cumpleanos-panel">
+
+            <h2 class="page-section-title">
+                <i class="fa-solid fa-cake-candles"></i>
+                Cumpleaños de hoy y próximos 7 días
+            </h2>
+
+            <ul class="cumpleanos-lista">
+
+                <?php foreach ($cumpleanosPanel as $cumple): ?>
+
+                <li class="cumpleanos-item <?= $cumple['dias_faltan'] === 0 ? 'cumpleanos-item--hoy' : '' ?>">
+
+                    <a href="<?= BASE_URL ?>/views/jovenes/ver.php?id=<?= (int) $cumple['id'] ?>">
+                        <?= htmlspecialchars($cumple['nombre_completo']) ?>
+                    </a>
+
+                    <span class="cumpleanos-item__detalle">
+                        cumple <?= (int) $cumple['cumple'] ?> años --
+                        <?php if ($cumple['dias_faltan'] === 0): ?>
+                            <strong>hoy</strong>
+                        <?php elseif ($cumple['dias_faltan'] === 1): ?>
+                            mañana
+                        <?php else: ?>
+                            en <?= (int) $cumple['dias_faltan'] ?> días (<?= date('d/m', strtotime($cumple['fecha_cumpleanos'])) ?>)
+                        <?php endif; ?>
+                    </span>
+
+                </li>
+
+                <?php endforeach; ?>
+
+            </ul>
+
+        </div>
+
+        <?php endif; ?>
+
+        <!-- =====================================================
+             REPORTES (mensual / trimestral / anual) -- descarga en
+             Excel o PDF; el mes y el año actuales por defecto
+        ====================================================== -->
+
+        <div class="page-section">
+
+            <h2 class="page-section-title">
+                <i class="fa-solid fa-file-lines"></i>
+                Reportes
+            </h2>
+
+            <div class="dashboard-reportes">
+
+                <p class="dashboard-reportes__texto">
+                    Resumen de jóvenes, reuniones, asistencia, servidores, discipulado
+                    y seguimientos, listo para entregar. También puedes cerrar el año
+                    y consultar los cierres anteriores.
+                </p>
+
+                <?php
+                $urlRep = static fn(string $formato, string $tipo): string =>
+                    BASE_URL . '/controllers/reporteController.php?' . http_build_query([
+                        'action' => 'descargar_reporte',
+                        'formato' => $formato,
+                        'tipo' => $tipo,
+                        'anio' => (int) date('Y'),
+                        'mes' => (int) date('n'),
+                    ]);
+                ?>
+
+                <a href="<?= htmlspecialchars($urlRep('xlsx', 'mensual')) ?>" class="btn btn-secondary btn-sm">
+                    <i class="fa-solid fa-file-excel"></i> Mes actual (Excel)
+                </a>
+
+                <a href="<?= htmlspecialchars($urlRep('pdf', 'mensual')) ?>" class="btn btn-secondary btn-sm">
+                    <i class="fa-solid fa-file-pdf"></i> Mes actual (PDF)
+                </a>
+
+                <a href="<?= BASE_URL ?>/views/reportes/index.php" class="btn btn-primary btn-sm">
+                    <i class="fa-solid fa-chart-column"></i> Más reportes y cierre anual
+                </a>
+
+            </div>
+
+        </div>
 
         <div class="page-section">
 

@@ -1578,6 +1578,139 @@ function obtenerResumenSeguimientosMes(
 
 
 /* ==========================================================
+   LISTADO DE JÓVENES POR CATEGORÍA DEL RESUMEN MENSUAL
+   ----------------------------------------------------------
+   Mismos 4 criterios EXACTOS que obtenerResumenSeguimientosMes()
+   (misma fuente de verdad), pero devolviendo las filas en vez
+   de un COUNT -- para que las tarjetas del resumen puedan ser
+   hipervínculos que muestren el listado real, garantizando que
+   el número de la tarjeta y el listado que abre sean siempre
+   el mismo conjunto de datos.
+========================================================== */
+
+function obtenerListaSeguimientosMesPorCategoria(
+    PDO $pdo,
+    string $categoria,
+    int $anio,
+    int $mes
+): array {
+
+    switch ($categoria) {
+
+        case 'activos':
+
+            $stmt = $pdo->prepare("
+                SELECT j.id, j.nombre_completo
+
+                FROM jovenes j
+
+                WHERE j.estado_actividad = 'ACTIVO'
+                AND j.estado_espiritual = 'NUEVO'
+
+                ORDER BY j.nombre_completo ASC
+            ");
+
+            $stmt->execute();
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        case 'con_seguimiento':
+
+            $stmt = $pdo->prepare("
+                SELECT DISTINCT j.id, j.nombre_completo
+
+                FROM jovenes j
+
+                INNER JOIN seguimientos s
+                    ON s.joven_id = j.id
+
+                WHERE j.estado_actividad = 'ACTIVO'
+                AND j.estado_espiritual = 'NUEVO'
+                AND s.estado_proceso = 'FINALIZADO'
+                AND s.fecha_contacto IS NOT NULL
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM excepciones_seguimiento e
+                    WHERE e.joven_id = j.id
+                    AND e.anio = :anio
+                    AND e.mes = :mes
+                )
+
+                ORDER BY j.nombre_completo ASC
+            ");
+
+            $stmt->execute(['anio' => $anio, 'mes' => $mes]);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        case 'excepciones':
+
+            $stmt = $pdo->prepare("
+                SELECT DISTINCT j.id, j.nombre_completo, e.motivo
+
+                FROM excepciones_seguimiento e
+
+                INNER JOIN jovenes j
+                    ON j.id = e.joven_id
+
+                WHERE e.anio = :anio
+                AND e.mes = :mes
+                AND j.estado_actividad = 'ACTIVO'
+                AND j.estado_espiritual = 'NUEVO'
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM seguimientos s
+                    WHERE s.joven_id = j.id
+                    AND s.estado_proceso = 'FINALIZADO'
+                    AND s.fecha_contacto IS NOT NULL
+                )
+
+                ORDER BY j.nombre_completo ASC
+            ");
+
+            $stmt->execute(['anio' => $anio, 'mes' => $mes]);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        case 'sin_seguimiento':
+
+            $stmt = $pdo->prepare("
+                SELECT j.id, j.nombre_completo
+
+                FROM jovenes j
+
+                WHERE j.estado_actividad = 'ACTIVO'
+                AND j.estado_espiritual = 'NUEVO'
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM seguimientos s
+                    WHERE s.joven_id = j.id
+                    AND s.estado_proceso = 'FINALIZADO'
+                    AND s.fecha_contacto IS NOT NULL
+                )
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM excepciones_seguimiento e
+                    WHERE e.joven_id = j.id
+                    AND e.anio = :anio
+                    AND e.mes = :mes
+                )
+
+                ORDER BY j.nombre_completo ASC
+            ");
+
+            $stmt->execute(['anio' => $anio, 'mes' => $mes]);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        default:
+
+            return [];
+    }
+}
+
+
+/* ==========================================================
    SEGUIMIENTOS POR JOVEN
 ========================================================== */
 

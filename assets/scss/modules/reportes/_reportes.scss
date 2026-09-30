@@ -1,0 +1,95 @@
+/* =========================================================
+   REPORTES -- todo bajo .reportes-page para no afectar otras
+   pantallas que reutilizan .form-card / .table.
+========================================================= */
+
+.reportes-page__card{
+
+    max-width:100%;
+
+    padding:28px;
+}
+
+.reportes-page__explicacion{
+
+    margin:10px 0 22px;
+
+    color:var(--text-soft);
+
+    line-height:1.6;
+}
+
+.reportes-page__form{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+
+    gap:18px 22px;
+
+    align-items:end;
+}
+
+.reportes-page__acciones{
+
+    grid-column:1/-1;
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:12px;
+
+    margin-top:6px;
+}
+
+.reportes-page__cierre{
+
+    margin-top:26px;
+}
+
+.reportes-page__seccion{
+
+    margin:26px 0 12px;
+}
+
+.reportes-page__tabla th,
+.reportes-page__tabla td{
+
+    padding:16px 20px;
+
+    text-align:left;
+
+    vertical-align:top;
+}
+
+.reportes-page__nota{
+
+    margin-top:12px;
+
+    line-height:1.6;
+}
+
+/* ---- componente del dashboard que enlaza a Reportes ---- */
+
+.dashboard-reportes{
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:12px;
+
+    align-items:center;
+}
+
+.dashboard-reportes__texto{
+
+    flex:1 1 260px;
+
+    margin:0;
+
+    color:var(--text-soft);
+
+    line-height:1.6;
+}

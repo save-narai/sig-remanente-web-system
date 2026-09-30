@@ -9,16 +9,28 @@ require_once __DIR__ . '/../middleware/permiso.php';
 
     <div class="sidebar-content">
 
+        <div class="sidebar-logo">
+
+            <img
+                src="<?= BASE_URL . ($config['ruta_logo'] ?? '/assets/img/logo.png') ?>"
+                alt="<?= htmlspecialchars($config['nombre'] ?? 'Logo') ?>"
+            >
+
+        </div>
+
+        <nav class="sidebar-nav">
+
         <?php if (tienePermiso('ver_dashboard')): ?>
 
         <a
             class="<?= menuActivo('/dashboard.php') ?>"
             href="<?= BASE_URL ?>/views/dashboard.php"
+            title="Dashboard"
         >
 
-            <i class="fa-solid fa-house"></i>
+            <span class="sidebar-nav__icon"><i class="fa-solid fa-house"></i></span>
 
-            <span>Dashboard</span>
+            <span class="sidebar-nav__label">Dashboard</span>
 
         </a>
 
@@ -30,11 +42,12 @@ require_once __DIR__ . '/../middleware/permiso.php';
         <a
             class="<?= menuActivo('/jovenes/') ?>"
             href="<?= BASE_URL ?>/views/jovenes/index.php"
+            title="Jóvenes"
         >
 
-            <i class="fa-solid fa-users"></i>
+            <span class="sidebar-nav__icon"><i class="fa-solid fa-users"></i></span>
 
-            <span>Jóvenes</span>
+            <span class="sidebar-nav__label">Jóvenes</span>
 
         </a>
 
@@ -46,27 +59,46 @@ require_once __DIR__ . '/../middleware/permiso.php';
         <a
             class="<?= menuActivo('/reuniones/') ?>"
             href="<?= BASE_URL ?>/views/reuniones/index.php"
+            title="Reuniones"
         >
 
-            <i class="fa-solid fa-calendar"></i>
+            <span class="sidebar-nav__icon"><i class="fa-solid fa-calendar"></i></span>
 
-            <span>Reuniones</span>
+            <span class="sidebar-nav__label">Reuniones</span>
 
         </a>
 
         <?php endif; ?>
 
 
-        <?php if (tienePermiso('gestionar_reuniones')): ?>
+        <?php if (tienePermiso('gestionar_reuniones') || tienePermiso('gestionar_formacion')): ?>
 
         <a
             class="<?= menuActivo('/formacion/') ?>"
-            href="<?= BASE_URL ?>/views/formacion/discipulado/index.php"
+            href="<?= BASE_URL ?>/views/formacion/index.php"
+            title="Formación"
         >
 
-            <i class="fa-solid fa-graduation-cap"></i>
+            <span class="sidebar-nav__icon"><i class="fa-solid fa-graduation-cap"></i></span>
 
-            <span>Formación</span>
+            <span class="sidebar-nav__label">Formación</span>
+
+        </a>
+
+        <?php endif; ?>
+
+
+        <?php if (tienePermiso('ver_dashboard')): ?>
+
+        <a
+            class="<?= menuActivo('/reportes/') ?>"
+            href="<?= BASE_URL ?>/views/reportes/index.php"
+            title="Reportes"
+        >
+
+            <span class="sidebar-nav__icon"><i class="fa-solid fa-file-lines"></i></span>
+
+            <span class="sidebar-nav__label">Reportes</span>
 
         </a>
 
@@ -78,11 +110,12 @@ require_once __DIR__ . '/../middleware/permiso.php';
         <a
             class="<?= menuActivo('/seguimientos/') ?>"
             href="<?= BASE_URL ?>/views/seguimientos/index.php"
+            title="Seguimientos"
         >
 
-            <i class="fa-solid fa-notes-medical"></i>
+            <span class="sidebar-nav__icon"><i class="fa-solid fa-notes-medical"></i></span>
 
-            <span>Seguimientos</span>
+            <span class="sidebar-nav__label">Seguimientos</span>
 
         </a>
 
@@ -94,11 +127,12 @@ require_once __DIR__ . '/../middleware/permiso.php';
         <a
             class="<?= menuActivo('/usuarios/') ?>"
             href="<?= BASE_URL ?>/views/usuarios/index.php"
+            title="Usuarios"
         >
 
-            <i class="fa-solid fa-users-gear"></i>
+            <span class="sidebar-nav__icon"><i class="fa-solid fa-users-gear"></i></span>
 
-            <span>Usuarios</span>
+            <span class="sidebar-nav__label">Usuarios</span>
 
         </a>
 
@@ -113,22 +147,28 @@ require_once __DIR__ . '/../middleware/permiso.php';
         <a
             class="<?= menuActivo('/roles/') ?>"
             href="<?= BASE_URL ?>/views/roles/index.php"
+            title="Roles"
         >
 
-            <i class="fa-solid fa-gear"></i>
+            <span class="sidebar-nav__icon"><i class="fa-solid fa-gear"></i></span>
 
-            <span>Roles</span>
+            <span class="sidebar-nav__label">Roles</span>
 
         </a>
 
         <?php endif; ?>
 
+        </nav>
 
-        <a href="<?= BASE_URL ?>/logout.php">
+        <a
+            class="sidebar-logout"
+            href="<?= BASE_URL ?>/logout.php"
+            title="Salir"
+        >
 
-            <i class="fa-solid fa-right-from-bracket"></i>
+            <span class="sidebar-nav__icon"><i class="fa-solid fa-right-from-bracket"></i></span>
 
-            <span>Salir</span>
+            <span class="sidebar-nav__label">Salir</span>
 
         </a>
 

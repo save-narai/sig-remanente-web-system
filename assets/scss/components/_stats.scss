@@ -108,3 +108,24 @@ html:not(.dark) .stat-card{
         0 0 0 1px rgba(239,68,68,.15),
         0 0 18px rgba(239,68,68,.12);
 }
+/* =====================================================
+   HIPERVÍNCULO -- cuando .stat-card es <a> (Fase 8+)
+===================================================== */
+
+a.stat-card{
+
+    display:block;
+
+    text-decoration:none;
+
+    color:inherit;
+
+    cursor:pointer;
+}
+
+.stat-card--activa{
+
+    outline:2px solid var(--primary);
+
+    outline-offset:2px;
+}

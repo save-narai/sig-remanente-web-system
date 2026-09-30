@@ -2,6 +2,7 @@
 require_once __DIR__ . "/../../middleware/auth.php";
 require_once __DIR__ . "/../../middleware/permiso.php";
 require_once __DIR__ . "/../../services/actividadService.php";
+require_once __DIR__ . "/../../services/jovenService.php";
 require_once __DIR__ . "/../../config/conexion.php";
 require_once __DIR__ . "/../../helpers/csrf.php";
 
@@ -12,6 +13,14 @@ if (!tienePermiso('gestionar_jovenes')) {
 }
 
 generarCsrf();
+
+// Refresca jovenes.estado_actividad antes de leerlo/filtrarlo/contarlo
+// en esta vista -- sin esto, el listado podía mostrar un estado
+// ACTIVO/INACTIVO desactualizado si nadie había visitado el Dashboard
+// (u otra vista que ya llama a esta función) desde el último cambio
+// de asistencia. Misma llamada que ya hacen dashboardController.php,
+// historial.php y perfil_pdf.php -- fuente única y siempre fresca.
+actualizarEstadoActividad($pdo);
 
 /* =========================================================
    FILTROS (multi-filtro real)
@@ -42,13 +51,20 @@ if (
         'activos'                      => ['estado' => 'activos'],
         'inactivos'                    => ['estado' => 'inactivos'],
         'eliminados'                   => ['estado' => 'eliminados'],
-        'riesgo2'                      => ['riesgo' => ['riesgo2']],
-        'riesgo3'                      => ['riesgo' => ['riesgo3']],
+        // Compatibilidad con marcadores antiguos: el modelo viejo
+        // tenía 2 niveles (Riesgo/Alto riesgo); el modelo único
+        // confirmado solo tiene 1 nivel intermedio (Alerta), así
+        // que ambos degradan al mismo filtro.
+        'riesgo2'                      => ['riesgo' => ['alerta']],
+        'riesgo3'                      => ['riesgo' => ['alerta']],
         'nuevos'                       => ['caracteristica' => ['nuevos']],
         'antiguos'                     => ['caracteristica' => ['antiguos']],
         'congregantes'                 => ['espiritu' => ['congregantes']],
-        'discipulado'                  => ['espiritu' => ['discipulado']],
-        'servidores_lideres'           => ['espiritu' => ['servidores_lideres']],
+        // Fase 6: "discipulado" y "servidores_lideres" ya no son
+        // estado_espiritual. El primero ya no tiene equivalente
+        // (la fuente de verdad es el módulo de discipulado, no un
+        // filtro de jóvenes); el segundo ahora sale de Usuarios.
+        'servidores_lideres'           => ['caracteristica' => ['servidores_ministerio_jovenes']],
         'servidores_todos_ministerios' => ['caracteristica' => ['servidores_todos_ministerios']]
     ];
 
@@ -60,9 +76,9 @@ if (
 }
 
 $estadosPermitidos = ['todos', 'activos', 'inactivos', 'eliminados'];
-$riesgoPermitidos = ['riesgo2', 'riesgo3'];
-$espirituPermitidos = ['congregantes', 'discipulado', 'servidores_lideres'];
-$caracteristicaPermitidos = ['nuevos', 'antiguos', 'servidores_todos_ministerios'];
+$riesgoPermitidos = ['alerta'];
+$espirituPermitidos = ['nuevo_espiritual', 'congregantes'];
+$caracteristicaPermitidos = ['nuevos', 'antiguos', 'servidores_todos_ministerios', 'servidores_ministerio_jovenes'];
 
 $estado = (string) ($_GET['estado'] ?? 'todos');
 
@@ -104,6 +120,11 @@ $totalFiltrosActivos =
    QUERY
 ========================================================= */
 
+// Refresca jovenes.estado_espiritual (estado congregacional) antes
+// de leerlo/filtrarlo -- es una funcion pura de fecha_ingreso, el
+// UPDATE es una sola sentencia barata (ver jovenService.php).
+actualizarEstadoCongregacional($pdo);
+
 $query = "
 SELECT
     j.id,
@@ -113,9 +134,16 @@ SELECT
     j.fecha_actualizacion_edad,
     j.estado_espiritual,
     j.estado_actividad,
-    j.fecha_ingreso
+    j.fecha_ingreso,
+    j.usuario_id
 
 FROM jovenes j
+
+LEFT JOIN usuarios u
+    ON u.id = j.usuario_id
+
+LEFT JOIN roles r
+    ON r.id = u.rol_id
 ";
 
 $where = [];
@@ -137,24 +165,19 @@ if ($estado === 'eliminados') {
     }
 }
 
-// Estado espiritual: mismas categorías de jovenService.php
-// (ESTADOS_ESPIRITUALES). Varios valores se combinan con OR
-// entre sí (ej. Congregantes O Discipulado), y ese grupo se
-// combina con AND respecto a los demás grupos.
+// Estado congregacional (Fase 6): solo NUEVO/CONGREGANTE, derivado
+// de fecha_ingreso. "Discipulado" y "Servidor/Líder" ya no viven
+// aquí (ver Características más abajo).
 if (!empty($espirituSeleccion)) {
 
     $condiciones = [];
 
+    if (in_array('nuevo_espiritual', $espirituSeleccion, true)) {
+        $condiciones[] = "j.estado_espiritual = 'NUEVO'";
+    }
+
     if (in_array('congregantes', $espirituSeleccion, true)) {
         $condiciones[] = "j.estado_espiritual = 'CONGREGANTE'";
-    }
-
-    if (in_array('discipulado', $espirituSeleccion, true)) {
-        $condiciones[] = "j.estado_espiritual = 'DISCIPULADO'";
-    }
-
-    if (in_array('servidores_lideres', $espirituSeleccion, true)) {
-        $condiciones[] = "j.estado_espiritual IN ('SERVIDOR', 'LIDER')";
     }
 
     $where[] = '(' . implode(' OR ', $condiciones) . ')';
@@ -162,8 +185,12 @@ if (!empty($espirituSeleccion)) {
 
 // Características: "nuevos"/"antiguos" mismo criterio exacto de
 // dashboardService.php::obtenerNuevosAntiguos(); "servidores de
-// cualquier ministerio" = es_servidor, sin relación con
-// estado_espiritual. Varios valores del grupo se combinan con OR.
+// cualquier ministerio" = es_servidor (columna propia, sin relación
+// con lo demás); "servidor del Ministerio de Jóvenes" (Fase 6) =
+// misma fuente y mismo criterio que
+// actividadService.php::esServidorMinisterioJovenes() (usuario_id
+// vinculado y su rol no es el ADMIN protegido). Varios valores del
+// grupo se combinan con OR.
 if (!empty($caracteristicaSeleccion)) {
 
     $condiciones = [];
@@ -180,6 +207,10 @@ if (!empty($caracteristicaSeleccion)) {
         $condiciones[] = "j.es_servidor = 1";
     }
 
+    if (in_array('servidores_ministerio_jovenes', $caracteristicaSeleccion, true)) {
+        $condiciones[] = "(j.usuario_id IS NOT NULL AND u.activo = 1)";
+    }
+
     $where[] = '(' . implode(' OR ', $condiciones) . ')';
 }
 
@@ -193,29 +224,18 @@ $stmt->execute();
 
 $jovenes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Riesgo / Alto riesgo: ya NO se calculan con una fórmula propia de esta
-// vista. Se reutiliza actividadService.php::estadoConexionJoven() (la misma
-// fuente central que ya usa el Dashboard), filtrando en PHP después de traer
-// la lista, para que el número de este listado y el del KPI del Dashboard
-// salgan siempre del mismo criterio. Varios valores del grupo (Riesgo,
-// Alto riesgo) se combinan con OR, igual que los demás grupos.
+// Alerta: modelo único confirmado (4/12 ausencias consecutivas
+// demostrables). Se reutiliza actividadService.php::etiquetaVisualActividadJuvenil()
+// (la misma fuente central que ya usa el Dashboard), filtrando en PHP
+// después de traer la lista, para que el número de este listado y el
+// del KPI del Dashboard salgan siempre del mismo criterio.
 if (!empty($riesgoSeleccion)) {
-
-    $estadosBuscados = [];
-
-    if (in_array('riesgo2', $riesgoSeleccion, true)) {
-        $estadosBuscados[] = 'Riesgo';
-    }
-
-    if (in_array('riesgo3', $riesgoSeleccion, true)) {
-        $estadosBuscados[] = 'Alto Riesgo';
-    }
 
     $jovenes = array_values(array_filter(
         $jovenes,
-        function (array $j) use ($pdo, $estadosBuscados): bool {
-            $conexion = estadoConexionJoven($pdo, (int) $j["id"]);
-            return in_array($conexion["estado"], $estadosBuscados, true);
+        function (array $j) use ($pdo): bool {
+            $etiqueta = etiquetaVisualActividadJuvenil($pdo, (int) $j["id"]);
+            return $etiqueta["clasificacion"] === 'ALERTA';
         }
     ));
 }
@@ -274,14 +294,13 @@ $etiquetasFiltro = [
     'activos' => 'Activos',
     'inactivos' => 'Inactivos',
     'eliminados' => 'Eliminados',
-    'riesgo2' => 'Riesgo',
-    'riesgo3' => 'Alto riesgo',
-    'congregantes' => 'Congregantes',
-    'discipulado' => 'Discipulado',
-    'servidores_lideres' => 'Servidores/Líderes',
+    'alerta' => 'Alerta',
+    'nuevo_espiritual' => 'Nuevo',
+    'congregantes' => 'Congregante',
     'nuevos' => 'Nuevos (≤3 meses)',
     'antiguos' => 'Antiguos',
-    'servidores_todos_ministerios' => 'Servidores (todos los ministerios)'
+    'servidores_todos_ministerios' => 'Servidores (todos los ministerios)',
+    'servidores_ministerio_jovenes' => 'Servidores del Ministerio de Jóvenes'
 ];
 
 ?>
@@ -466,13 +485,8 @@ $etiquetasFiltro = [
                     <div class="filter-dropdown__body" data-group="riesgo">
 
                         <label class="filter-dropdown__option">
-                            <input type="checkbox" name="riesgo[]" value="riesgo2" <?= in_array('riesgo2', $riesgoSeleccion, true) ? 'checked' : '' ?>>
-                            Riesgo
-                        </label>
-
-                        <label class="filter-dropdown__option">
-                            <input type="checkbox" name="riesgo[]" value="riesgo3" <?= in_array('riesgo3', $riesgoSeleccion, true) ? 'checked' : '' ?>>
-                            Alto riesgo
+                            <input type="checkbox" name="riesgo[]" value="alerta" <?= in_array('alerta', $riesgoSeleccion, true) ? 'checked' : '' ?>>
+                            Alerta (4-11 ausencias)
                         </label>
 
                     </div>
@@ -482,7 +496,7 @@ $etiquetasFiltro = [
                 <details class="filter-dropdown" <?= !empty($espirituSeleccion) ? 'open' : '' ?>>
 
                     <summary>
-                        Estado espiritual
+                        Estado congregacional
                         <?php if (!empty($espirituSeleccion)): ?>
                             <span class="filter-dropdown__badge" data-count-badge><?= count($espirituSeleccion) ?></span>
                         <?php endif; ?>
@@ -490,19 +504,14 @@ $etiquetasFiltro = [
 
                     <div class="filter-dropdown__body" data-group="espiritu">
 
-                        <label class="filter-dropdown__option">
+                        <label class="filter-dropdown__option" title="Menos de 6 meses desde la fecha de ingreso">
+                            <input type="checkbox" name="espiritu[]" value="nuevo_espiritual" <?= in_array('nuevo_espiritual', $espirituSeleccion, true) ? 'checked' : '' ?>>
+                            Nuevo
+                        </label>
+
+                        <label class="filter-dropdown__option" title="6 meses o más desde la fecha de ingreso">
                             <input type="checkbox" name="espiritu[]" value="congregantes" <?= in_array('congregantes', $espirituSeleccion, true) ? 'checked' : '' ?>>
-                            Congregantes
-                        </label>
-
-                        <label class="filter-dropdown__option">
-                            <input type="checkbox" name="espiritu[]" value="discipulado" <?= in_array('discipulado', $espirituSeleccion, true) ? 'checked' : '' ?>>
-                            Discipulado
-                        </label>
-
-                        <label class="filter-dropdown__option" title="estado_espiritual = SERVIDOR o LIDER (provisional, no distingue ministerio todavía)">
-                            <input type="checkbox" name="espiritu[]" value="servidores_lideres" <?= in_array('servidores_lideres', $espirituSeleccion, true) ? 'checked' : '' ?>>
-                            Servidores/Líderes
+                            Congregante
                         </label>
 
                     </div>
@@ -533,6 +542,11 @@ $etiquetasFiltro = [
                         <label class="filter-dropdown__option" title="es_servidor = Sí, de cualquier ministerio">
                             <input type="checkbox" name="caracteristica[]" value="servidores_todos_ministerios" <?= in_array('servidores_todos_ministerios', $caracteristicaSeleccion, true) ? 'checked' : '' ?>>
                             Servidores (todos los ministerios)
+                        </label>
+
+                        <label class="filter-dropdown__option" title="Tiene una cuenta de usuario activa vinculada (administradora, líder, sublíder o usuario independiente)">
+                            <input type="checkbox" name="caracteristica[]" value="servidores_ministerio_jovenes" <?= in_array('servidores_ministerio_jovenes', $caracteristicaSeleccion, true) ? 'checked' : '' ?>>
+                            Servidores del Ministerio de Jóvenes
                         </label>
 
                     </div>
@@ -695,8 +709,8 @@ $etiquetasFiltro = [
             $restoMeses = $meses % 12;
 
             // Misma fuente que el filtro de arriba y que el Dashboard:
-            // actividadService.php::estadoConexionJoven().
-            $conexion = estadoConexionJoven($pdo, (int) $j["id"]);
+            // actividadService.php::etiquetaVisualActividadJuvenil().
+            $conexion = etiquetaVisualActividadJuvenil($pdo, (int) $j["id"]);
             $conexionReal = $conexion["estado"];
 
             ?>
@@ -745,20 +759,15 @@ $etiquetasFiltro = [
 
                 <?php
 
-                if ($conexionReal === "Alto Riesgo") {
-
-                    echo 'data-order="4">';
-                    echo '<span class="joven-riesgo3">Alto riesgo</span>';
-
-                } elseif ($conexionReal === "Riesgo") {
+                if ($conexionReal === "Inactivo") {
 
                     echo 'data-order="3">';
-                    echo '<span class="joven-riesgo2">Riesgo</span>';
+                    echo '<span class="joven-riesgo3">Inactivo</span>';
 
-                } elseif ($conexionReal === "Observación") {
+                } elseif ($conexionReal === "Alerta") {
 
                     echo 'data-order="2">';
-                    echo '<span class="joven-observacion">Observación</span>';
+                    echo '<span class="joven-riesgo2">Alerta</span>';
 
                 } else {
 

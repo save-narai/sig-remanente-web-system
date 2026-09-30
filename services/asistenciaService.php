@@ -83,12 +83,84 @@ function obtenerTipoReunion(
 
 
 /* ==========================================================
-   OBTENER JÓVENES ACTIVOS
+   OBTENER FECHA DE REUNIÓN (FASE 3)
+
+   Funcion nueva y minima, separada de obtenerTipoReunion()
+   para no tocar su firma ni a su unico consumidor existente.
+   Se usa para prevenir asistencias retroactivas incorrectas
+   en procesarJovenes() (ver seccion 10 del prompt de Fase 3).
 ========================================================== */
 
-function obtenerJovenesActivos(
+function obtenerFechaReunion(
+    PDO $pdo,
+    int $reunionId
+): ?string {
+
+    $stmt = $pdo->prepare("
+
+        SELECT fecha
+
+        FROM reuniones
+
+        WHERE id = :id
+
+        LIMIT 1
+
+    ");
+
+    $stmt->execute([
+        'id' => $reunionId
+    ]);
+
+    $fecha = $stmt->fetchColumn();
+
+    return $fecha !== false ? (string) $fecha : null;
+
+}
+
+
+/* ==========================================================
+   OBTENER PARTICIPANTES PARA ASISTENCIA
+
+   NOTA (corrección de conflicto): esta función NO es la
+   misma que obtenerJovenesActivos() de jovenService.php, y
+   nunca debió compartir su nombre -- son dos consultas con
+   propósito y filtro distintos:
+
+     - jovenService.php::obtenerJovenesActivos() trae solo
+       estado_actividad='ACTIVO' (id, nombre_completo,
+       telefono, genero, estado_espiritual). La usa
+       discipuladoService.php para elegibilidad de
+       inscripción.
+
+     - Esta función trae estado_actividad <> 'ELIMINADO'
+       (incluye ACTIVO e INACTIVO) más edad, fecha_ingreso y
+       fecha_creacion. Un joven INACTIVO igual debe poder
+       recibir su fila de asistencia (asistir de nuevo es
+       justamente lo que puede revertir su estado en el
+       modelo 4/12) -- usar el filtro más estricto de
+       jovenService.php aquí sería una regresión real, no
+       una simplificación.
+
+   Se renombra para eliminar el "Cannot redeclare" sin alterar
+   el comportamiento de ninguna de las dos: cada una conserva
+   su propio nombre, su propio filtro y su único consumidor.
+========================================================== */
+
+function obtenerParticipantesAsistencia(
     PDO $pdo
 ): array {
+
+    /*
+       FASE 3: se agregan fecha_ingreso y fecha_creacion.
+       Se usan unicamente en procesarJovenes() para evitar
+       crear retroactivamente asistencia de jovenes que no
+       correspondian temporalmente a una reunion (ver
+       auditoria previa: reabrir una reunion antigua no debe
+       fabricar ausencias para quien todavia no existia).
+       No cambia el comportamiento para ningun otro consumidor
+       de este arreglo.
+    */
 
     $stmt = $pdo->query("
 
@@ -96,7 +168,9 @@ function obtenerJovenesActivos(
             id,
             nombre_completo,
             edad,
-            estado_actividad
+            estado_actividad,
+            fecha_ingreso,
+            fecha_creacion
 
         FROM jovenes
 
@@ -185,11 +259,26 @@ function obtenerContextoAsistencia(
 
 
     /* ------------------------------------------------------
+       OBTENER FECHA (FASE 3)
+
+       Se usa exclusivamente para no crear retroactivamente
+       asistencia de jovenes que no correspondian
+       temporalmente a esta reunion (ver procesarJovenes()).
+    ------------------------------------------------------ */
+
+    $fechaReunion =
+        obtenerFechaReunion(
+            $pdo,
+            $reunionId
+        );
+
+
+    /* ------------------------------------------------------
        OBTENER PARTICIPANTES
     ------------------------------------------------------ */
 
     $jovenes =
-        obtenerJovenesActivos(
+        obtenerParticipantesAsistencia(
             $pdo
         );
 
@@ -205,6 +294,9 @@ function obtenerContextoAsistencia(
 
         'tipo_reunion' =>
             $tipo,
+
+        'fecha_reunion' =>
+            $fechaReunion,
 
 
         /* --------------------------------------------------
@@ -870,6 +962,62 @@ function procesarJovenes(
 
             continue;
 
+        }
+
+
+        /* --------------------------------------------------
+           FASE 3 -- PREVENIR ASISTENCIA RETROACTIVA
+           INCORRECTA
+
+           Si el joven ingreso despues de la fecha de esta
+           reunion, o ni siquiera existia todavia en el
+           sistema en esa fecha, NO se crea/actualiza su
+           registro de asistencia para ella. Esto evita que
+           reabrir y volver a guardar una reunion antigua
+           fabrique ausencias para alguien que no
+           correspondia temporalmente a ese evento.
+
+           No borra ni altera ninguna asistencia ya existente:
+           solo evita crear una nueva en este caso.
+        -------------------------------------------------- */
+
+        if (
+            is_array($joven)
+            &&
+            !empty($contexto['fecha_reunion'])
+        ) {
+
+            $fechaReunion =
+                $contexto['fecha_reunion'];
+
+            $fechaIngresoJoven =
+                $joven['fecha_ingreso'] ?? null;
+
+            if (
+                $fechaIngresoJoven !== null
+                &&
+                $fechaIngresoJoven > $fechaReunion
+            ) {
+
+                continue;
+
+            }
+
+            if (
+                $fechaIngresoJoven === null
+                &&
+                !empty($joven['fecha_creacion'])
+            ) {
+
+                $fechaCreacionJoven =
+                    substr((string) $joven['fecha_creacion'], 0, 10);
+
+                if ($fechaCreacionJoven > $fechaReunion) {
+
+                    continue;
+
+                }
+            }
         }
 
 

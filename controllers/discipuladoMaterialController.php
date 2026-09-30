@@ -16,9 +16,14 @@ $archivo = $material ? realpath(__DIR__ . '/../storage/discipulado/' . basename(
 $directorio = realpath(__DIR__ . '/../storage/discipulado');
 
 if (!$material || !$archivo || !$directorio || !str_starts_with($archivo, $directorio . DIRECTORY_SEPARATOR)) { http_response_code(404); exit('Material no encontrado.'); }
-header('Content-Type: application/pdf');
+
+// El Word (.docx) no se puede mostrar "en línea" en el navegador de forma
+// fiable -- se fuerza descarga para ese caso aunque modo=ver.
+$esWord = str_ends_with(strtolower($material['archivo_generado']), '.docx');
+
+header('Content-Type: ' . ($material['mime_type'] ?: 'application/octet-stream'));
 header('X-Content-Type-Options: nosniff');
 header('Content-Length: ' . filesize($archivo));
-header('Content-Disposition: ' . ($modo === 'descargar' ? 'attachment' : 'inline') . '; filename="' . rawurlencode($material['nombre_original']) . '"');
+header('Content-Disposition: ' . (($modo === 'descargar' || $esWord) ? 'attachment' : 'inline') . '; filename="' . rawurlencode($material['nombre_original']) . '"');
 readfile($archivo);
 exit;

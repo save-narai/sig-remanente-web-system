@@ -58,6 +58,12 @@ $mail->SMTPDebug = 0;
 
     $mail->Port = $config['port'];
 
+    // Tiempo máximo de espera del servidor SMTP (por defecto PHPMailer
+    // espera hasta 300 s). Con un SMTP caído eso congelaría la página
+    // que dispare el envío (ej. la alerta de cumpleaños al abrir el
+    // dashboard); 15 s es suficiente para un handshake normal.
+    $mail->Timeout = 15;
+
     $mail->CharSet = 'UTF-8';
 
     $mail->isHTML(true);

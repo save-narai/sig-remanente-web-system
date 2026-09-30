@@ -566,3 +566,47 @@
 @media (max-width: 640px) {
     .discipulado-matriz { font-size: 12px; }
 }
+
+/* =====================================================
+   MATERIAL DE CLASE (PDF + Word, ronda de mejoras)
+===================================================== */
+
+.discipulado-material-slot{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    flex-wrap:wrap;
+
+    margin-bottom:6px;
+}
+
+.discipulado-material-slot__etiqueta{
+
+    font-size:12px;
+
+    font-weight:700;
+
+    color:var(--text-soft);
+
+    min-width:38px;
+}
+
+.discipulado-material-form{
+
+    display:inline-flex;
+}
+
+.discipulado-material-cambiar{
+
+    cursor:pointer;
+
+    font-size:0.85em;
+
+    color:var(--primary);
+
+    text-decoration:underline;
+}

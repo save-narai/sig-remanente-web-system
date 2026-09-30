@@ -16,7 +16,7 @@ if (!tienePermiso('gestionar_usuarios')) {
 
 $id = (int) ($_GET['id'] ?? 0);
 
-require_once __DIR__ . "/../../services/UsuarioService.php";
+require_once __DIR__ . "/../../services/usuarioService.php";
 
 $usuario = obtenerUsuarioPorId($pdo, $id);
 

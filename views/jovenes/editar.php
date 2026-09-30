@@ -346,6 +346,12 @@ require_once __DIR__ . "/../../includes/header.php";
 
                 >
 
+                <p class="form-hint">
+
+                    El estado congregacional (Nuevo/Congregante) se calcula automáticamente a partir de esta fecha -- no es un campo manual.
+
+                </p>
+
             </div>
 
             <!-- GÉNERO -->
@@ -402,111 +408,13 @@ require_once __DIR__ . "/../../includes/header.php";
 
             </div>
 
-            <!-- ESTADO ESPIRITUAL -->
-
-            <div class="form-group">
-
-                <label class="form-label">
-
-                    Estado espiritual
-
-                </label>
-
-                <select
-
-                    class="form-select"
-
-                    name="estado_espiritual"
-
-                    required
-
-                >
-
-                    <option value="">
-
-                        Seleccionar
-
-                    </option>
-
-                    <?php
-
-                    $estados = [
-
-                        "NUEVO",
-                        "CONGREGANTE",
-                        "DISCIPULADO",
-                        "SERVIDOR",
-                        "LIDER"
-
-                    ];
-
-                    foreach ($estados as $estado):
-
-                    ?>
-
-                        <option
-
-                            value="<?= $estado ?>"
-
-                            <?= ($joven['estado_espiritual'] ?? '') === $estado ? 'selected' : '' ?>
-
-                        >
-
-                            <?= htmlspecialchars($estado) ?>
-
-                        </option>
-
-                    <?php endforeach; ?>
-
-                </select>
-
-            </div>
-
-            <!-- SERVIDOR -->
-
-            <div class="form-group form-group-full">
-
-                <label class="form-label">
-
-                    ¿Es servidor?
-
-                </label>
-
-                <select
-
-                    class="form-select"
-
-                    name="es_servidor"
-
-                >
-
-                    <option
-
-                        value="0"
-
-                        <?= (int) ($joven['es_servidor'] ?? 0) === 0 ? 'selected' : '' ?>
-
-                    >
-
-                        No
-
-                    </option>
-
-                    <option
-
-                        value="1"
-
-                        <?= (int) ($joven['es_servidor'] ?? 0) === 1 ? 'selected' : '' ?>
-
-                    >
-
-                        Sí
-
-                    </option>
-
-                </select>
-
-            </div>
+            <!-- SERVIDOR: campo manual retirado (Fase 8 -- pulido).
+                 Misma razón que en crear.php: la condición de
+                 servidor del Ministerio de Jóvenes viene ahora del
+                 vínculo con Usuarios (jovenes.usuario_id, Fase 6).
+                 es_servidor (otro ministerio) sigue en la base de
+                 datos sin tocar, solo deja de ser campo de este
+                 formulario. -->
 
             <!-- OBSERVACIONES -->
 

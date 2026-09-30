@@ -277,9 +277,29 @@ require_once __DIR__ . "/../../includes/header.php";
          ESTADÍSTICAS
     ========================== -->
 
+    <?php
+    // Mismo criterio (mismo mes/año) que obtenerResumenSeguimientosMes():
+    // hipervínculos que abren el listado real de jóvenes de cada
+    // categoría, garantizando que el número y el listado sean
+    // siempre exactamente el mismo conjunto de datos.
+    $anioActualSeg = (int) date('Y');
+    $mesActualSeg = (int) date('m');
+
+    $verCategoria = $_GET['ver'] ?? '';
+
+    $categoriasValidas = ['activos', 'con_seguimiento', 'sin_seguimiento', 'excepciones'];
+
+    if (!in_array($verCategoria, $categoriasValidas, true)) {
+        $verCategoria = '';
+    }
+    ?>
+
     <section class="gx-stats">
 
-        <div class="stat-card info">
+        <a
+            href="?ver=activos"
+            class="stat-card info <?= $verCategoria === 'activos' ? 'stat-card--activa' : '' ?>"
+        >
 
             <span class="stat-number">
                 <?= $totalActivos ?>
@@ -289,10 +309,13 @@ require_once __DIR__ . "/../../includes/header.php";
                 Jóvenes activos
             </span>
 
-        </div>
+        </a>
 
 
-        <div class="stat-card success">
+        <a
+            href="?ver=con_seguimiento"
+            class="stat-card success <?= $verCategoria === 'con_seguimiento' ? 'stat-card--activa' : '' ?>"
+        >
 
             <span class="stat-number">
                 <?= $totalConSeguimiento ?>
@@ -302,10 +325,13 @@ require_once __DIR__ . "/../../includes/header.php";
                 Con seguimiento
             </span>
 
-        </div>
+        </a>
 
 
-        <div class="stat-card danger">
+        <a
+            href="?ver=sin_seguimiento"
+            class="stat-card danger <?= $verCategoria === 'sin_seguimiento' ? 'stat-card--activa' : '' ?>"
+        >
 
             <span class="stat-number">
                 <?= $totalSinSeguimiento ?>
@@ -315,7 +341,7 @@ require_once __DIR__ . "/../../includes/header.php";
                 Sin seguimiento
             </span>
 
-        </div>
+        </a>
 
 
         <div class="stat-card <?= e($color) ?>">
@@ -335,6 +361,94 @@ require_once __DIR__ . "/../../includes/header.php";
         </div>
 
     </section>
+
+
+    <!-- =========================
+         DETALLE DE LA CATEGORÍA SELECCIONADA
+         (misma consulta que alimenta el número de arriba)
+    ========================== -->
+
+    <?php if ($verCategoria !== ''): ?>
+
+    <?php
+    $etiquetasCategoria = [
+        'activos' => 'Jóvenes activos (nuevos)',
+        'con_seguimiento' => 'Con seguimiento',
+        'sin_seguimiento' => 'Sin seguimiento',
+        'excepciones' => 'Con excepción este mes',
+    ];
+
+    $listaCategoria = obtenerListaSeguimientosMesPorCategoria(
+        $pdo,
+        $verCategoria,
+        $anioActualSeg,
+        $mesActualSeg
+    );
+    ?>
+
+    <section class="page-section" id="detalle-categoria">
+
+        <div class="section-header">
+
+            <div>
+                <h2 class="section-title">
+                    <?= htmlspecialchars($etiquetasCategoria[$verCategoria] ?? 'Detalle') ?>
+                    (<?= count($listaCategoria) ?>)
+                </h2>
+                <p class="section-subtitle">
+                    <?= htmlspecialchars($mesTexto) ?>
+                </p>
+            </div>
+
+            <a href="?" class="btn btn-back btn-sm">
+                Cerrar
+            </a>
+
+        </div>
+
+        <?php if (empty($listaCategoria)): ?>
+
+            <p class="text-center">No hay jóvenes en esta categoría.</p>
+
+        <?php else: ?>
+
+            <div class="table-responsive">
+                <table class="table gx-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <?php if ($verCategoria === 'excepciones'): ?>
+                                <th>Motivo</th>
+                            <?php endif; ?>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($listaCategoria as $joven): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($joven['nombre_completo']) ?></td>
+                                <?php if ($verCategoria === 'excepciones'): ?>
+                                    <td><?= htmlspecialchars($joven['motivo'] ?? '—') ?></td>
+                                <?php endif; ?>
+                                <td>
+                                    <a
+                                        href="<?= BASE_URL ?>/views/jovenes/ver.php?id=<?= (int) $joven['id'] ?>"
+                                        class="btn btn-primary btn-sm"
+                                    >
+                                        Ver perfil
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+        <?php endif; ?>
+
+    </section>
+
+    <?php endif; ?>
 
 
     <!-- =========================

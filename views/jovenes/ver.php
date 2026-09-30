@@ -11,6 +11,13 @@ require_once __DIR__ . "/../../services/seguimientoService.php";
    ACTUALIZAR ACTIVIDAD
 ========================= */
 
+// (Comentario ya existía pero la llamada real faltaba -- corregido:
+// sin esto, esta vista podía mostrar un badge/estado desactualizado.
+// Misma llamada que dashboardController.php, historial.php e
+// index.php.)
+actualizarEstadoActividad($pdo);
+actualizarEstadoCongregacional($pdo);
+
 generarCsrf();
 
 /* =========================
@@ -130,9 +137,23 @@ $porcentaje = $totalAsistencia > 0
     : 0;
 
 /* =========================
-   ESTADO CONEXIÓN REAL
+   PERFIL DE ASISTENCIA JUVENIL -- PARTE 1
+
+   Indicadores derivados, solo tipos juveniles
+   (Reunión Jóvenes / Grupo Conexión), solo asistio=1.
+   No confundir con el bloque anterior (que suma toda la
+   tabla "asistencia" sin filtrar tipo de reunión).
 ========================= */
-$con = estadoConexionJoven(
+
+$perfilAsistencia = obtenerPerfilAsistenciaJuvenil(
+    $pdo,
+    $id
+);
+
+/* =========================
+   ESTADO DE ACTIVIDAD (modelo único 4/12)
+========================= */
+$con = etiquetaVisualActividadJuvenil(
     $pdo,
     $id
 );
@@ -148,11 +169,6 @@ $claseConexion = match ($con["color"]) {
     default => "conexion-ok"
 
 };
-
-$faltasConsecutivas = faltasConsecutivasConexion(
-    $pdo,
-    $id
-);
 
 /* =========================
    TOTAL SEGUIMIENTOS
@@ -264,6 +280,16 @@ $estadoActividad = strtoupper(
 
                     <?php endif; ?>
 
+                    <a
+                        href="<?= BASE_URL ?>/views/jovenes/perfil_pdf.php?id=<?= $id ?>"
+                        target="_blank"
+                        class="btn btn-pdf btn-sm <?= $claseGenero ?>"
+                        title="Exportar el perfil del joven en PDF"
+                    >
+                        <i class="fa-solid fa-file-pdf"></i>
+                        Perfil Joven
+                    </a>
+
                 </div>
 
             </div>
@@ -354,6 +380,237 @@ $estadoActividad = strtoupper(
     </div>
 
 </section>
+
+     <!-- ==========================================
+     ASISTENCIA JUVENIL (PERFIL DE ASISTENCIA -- PARTE 1)
+========================================== -->
+
+<section class="gx-profile__section">
+
+    <h3 class="gx-profile__section-title">
+        Asistencia Juvenil
+    </h3>
+
+    <!-- ==========================================
+         RESUMEN (siempre visible) -- las métricas
+         más consultadas primero; el detalle completo
+         queda bajo demanda en el <details> de abajo.
+    =========================================== -->
+
+    <div class="gx-profile__rows gx-profile__rows--resumen">
+
+        <article class="gx-profile__row">
+
+            <span class="gx-profile__label">
+                Racha actual de ausencias
+            </span>
+
+            <span class="gx-profile__value">
+                <?= $perfilAsistencia["ausencias_consecutivas_actuales"] ?>
+                <?= $perfilAsistencia["hay_desconocido_en_racha"]
+                    ? " (con reuniones sin registro más atrás)"
+                    : "" ?>
+            </span>
+
+        </article>
+
+        <article class="gx-profile__row">
+
+            <span class="gx-profile__label">
+                Última asistencia
+            </span>
+
+            <span class="gx-profile__value">
+                <?= $perfilAsistencia["ultima_asistencia"]
+                    ? date("d/m/Y", strtotime($perfilAsistencia["ultima_asistencia"]))
+                    : "Nunca ha asistido" ?>
+            </span>
+
+        </article>
+
+        <article class="gx-profile__row">
+
+            <span class="gx-profile__label">
+                Porcentaje de asistencia (últimos 12 meses)
+            </span>
+
+            <span class="gx-profile__value">
+                <?= $perfilAsistencia["porcentaje_asistencia_12_meses"] !== null
+                    ? $perfilAsistencia["porcentaje_asistencia_12_meses"] . "%"
+                    : "Sin datos" ?>
+            </span>
+
+        </article>
+
+        <article class="gx-profile__row">
+
+            <span class="gx-profile__label">
+                Patrón intermitente
+            </span>
+
+            <span class="gx-profile__value">
+                <?php if (!$perfilAsistencia["intermitencia_evaluable"]): ?>
+
+                    Datos insuficientes
+
+                <?php elseif ($perfilAsistencia["patron_intermitente"]): ?>
+
+                    Sí
+
+                <?php else: ?>
+
+                    No
+
+                <?php endif; ?>
+            </span>
+
+        </article>
+
+    </div>
+
+    <!-- ==========================================
+         DETALLE COMPLETO (bajo demanda)
+    =========================================== -->
+
+    <details class="gx-profile__detalle">
+
+        <summary>
+            Ver detalle completo de asistencia y últimas 8 reuniones
+        </summary>
+
+    <div class="gx-profile__rows">
+
+        <article class="gx-profile__row">
+
+            <span class="gx-profile__label">
+                Primera asistencia
+            </span>
+
+            <span class="gx-profile__value">
+                <?= $perfilAsistencia["tiene_primera_asistencia"]
+                    ? "Sí"
+                    : "No" ?>
+            </span>
+
+        </article>
+
+        <article class="gx-profile__row">
+
+            <span class="gx-profile__label">
+                Asistencias históricas
+            </span>
+
+            <span class="gx-profile__value">
+                <?= $perfilAsistencia["total_historico"] ?>
+            </span>
+
+        </article>
+
+        <article class="gx-profile__row">
+
+            <span class="gx-profile__label">
+                Asistencias últimos 12 meses
+            </span>
+
+            <span class="gx-profile__value">
+                <?= $perfilAsistencia["ultimos_12_meses"] ?>
+            </span>
+
+        </article>
+
+        <article class="gx-profile__row">
+
+            <span class="gx-profile__label">
+                Porcentaje de asistencia (histórico)
+            </span>
+
+            <span class="gx-profile__value">
+                <?= $perfilAsistencia["porcentaje_asistencia_historico"] !== null
+                    ? $perfilAsistencia["porcentaje_asistencia_historico"] . "%"
+                    : "Sin datos" ?>
+            </span>
+
+        </article>
+
+        <article class="gx-profile__row">
+
+            <span class="gx-profile__label">
+                Asistencia en últimas 8 reuniones
+            </span>
+
+            <span class="gx-profile__value">
+                <?= $perfilAsistencia["asistencias_ultimas_8_reuniones"] ?>
+                de las evaluables
+                <?= $perfilAsistencia["porcentaje_ultimas_8_reuniones"] !== null
+                    ? " (" . $perfilAsistencia["porcentaje_ultimas_8_reuniones"] . "%)"
+                    : "" ?>
+            </span>
+
+        </article>
+
+        <article class="gx-profile__row">
+
+            <span class="gx-profile__label"></span>
+
+            <span class="gx-profile__value" style="font-size: 0.85em; opacity: 0.75;">
+                Basado en las últimas 8 reuniones juveniles registradas. No modifica el estado de actividad.
+            </span>
+
+        </article>
+
+    </div>
+
+    <!-- ==========================================
+         ÚLTIMAS 8 REUNIONES
+    =========================================== -->
+
+    <h3 class="gx-profile__section-title">
+        Últimas 8 reuniones
+    </h3>
+
+    <?php if (empty($perfilAsistencia["ultimas_8_reuniones"])): ?>
+
+        <p class="gx-profile__value">
+            No hay reuniones juveniles registradas todavía.
+        </p>
+
+    <?php else: ?>
+
+        <div class="gx-profile__rows">
+
+            <?php foreach ($perfilAsistencia["ultimas_8_reuniones"] as $reunionReciente): ?>
+
+                <?php
+                    $etiquetaEstado = match ($reunionReciente["estado"]) {
+                        "PRESENTE" => "Presente",
+                        "AUSENTE" => "Ausente",
+                        default => "Sin registro",
+                    };
+                ?>
+
+                <article class="gx-profile__row">
+
+                    <span class="gx-profile__label">
+                        <?= date("d/m/Y", strtotime($reunionReciente["fecha"])) ?>
+                        — <?= htmlspecialchars($reunionReciente["tipo"]) ?>
+                    </span>
+
+                    <span class="gx-profile__value">
+                        <?= $etiquetaEstado ?>
+                    </span>
+
+                </article>
+
+            <?php endforeach; ?>
+
+        </div>
+
+    <?php endif; ?>
+
+    </details>
+
+</section>
+
 
         </div> <!-- /.gx-profile -->
 
@@ -736,24 +993,6 @@ $estadoActividad = strtoupper(
            
 
             Historial
-
-        </a>
-
-
-
-        <a
-
-            href="<?= BASE_URL ?>/views/jovenes/perfil_pdf.php?id=<?= $id ?>"
-
-            target="_blank"
-
-            class="btn btn-pdf <?= $claseGenero ?>"
-
-        >
-
-          
-
-            Perfil Joven
 
         </a>
 

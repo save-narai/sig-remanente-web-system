@@ -120,6 +120,8 @@ table {
           #ff4b2b,
           #ff416c
       );
+  --sidebar-dark-bg:#14141f;
+  --sidebar-dark-bg-2:#1b1b2b;
   /* =====================================================
      STATUS COLORS
   ===================================================== */
@@ -300,6 +302,17 @@ body {
 ========================================================= */
 /* =====================================================
    SIDEBAR
+   ---------------------------------------------------
+   Tarjeta oscura flotante con esquinas redondeadas
+   (referencia visual del usuario), usando los colores
+   de marca ya existentes (--card-gradient naranja/rosa)
+   en vez de los colores azul/morado de la referencia.
+
+   El ancho total (.sidebar) sigue siendo exactamente
+   var(--sidebar-collapsed)/var(--sidebar-width), igual
+   que antes, para no tener que tocar el margin-left de
+   .main en _layout.scss -- el "flotado" se logra con
+   padding interno, no con position+margin.
 ===================================================== */
 .sidebar {
   position: fixed;
@@ -308,11 +321,9 @@ body {
   bottom: 0;
   width: var(--sidebar-collapsed);
   height: 100vh;
+  box-sizing: border-box;
+  padding: 16px 10px;
   overflow: hidden;
-  background: var(--sidebar-gradient);
-  background-size: 400% 400%;
-  animation: liquidFlow 8s ease infinite;
-  box-shadow: 5px 0 30px rgba(0, 0, 0, 0.12);
   transition: width 0.3s ease;
   z-index: var(--z-sidebar);
 }
@@ -325,28 +336,66 @@ body {
 }
 
 /* =====================================================
-   CONTENT
+   TARJETA (fondo oscuro, flotante, bordes redondeados)
 ===================================================== */
 .sidebar-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   height: 100%;
-  padding: 20px 12px;
+  padding: 18px 10px;
+  border-radius: 26px;
+  background: linear-gradient(180deg, var(--sidebar-dark-bg-2), var(--sidebar-dark-bg));
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 /* =====================================================
-   LINKS
+   LOGO
 ===================================================== */
-.sidebar a {
+.sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 15px 18px;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 4px auto 18px;
+  border-radius: 14px;
+  background: var(--card-gradient);
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(255, 75, 43, 0.35);
+}
+
+.sidebar-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+/* =====================================================
+   NAV
+===================================================== */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+/* =====================================================
+   LINKS
+===================================================== */
+.sidebar-nav a,
+.sidebar-logout {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 14px;
   border-radius: 16px;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
   white-space: nowrap;
   transition: all 0.25s ease;
@@ -355,24 +404,23 @@ body {
 /* =====================================================
    HOVER
 ===================================================== */
-.sidebar a:hover {
-  background: rgba(255, 255, 255, 0.14);
-  transform: translateX(4px);
+.sidebar-nav a:hover,
+.sidebar-logout:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* =====================================================
-   ACTIVE
+   ACTIVE -- pastilla en degradado de marca
 ===================================================== */
-.sidebar a.active {
-  background: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  transform: translateX(4px);
+.sidebar-nav a.active {
+  background: var(--card-gradient);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(255, 75, 43, 0.35);
 }
 
-.sidebar a.active span,
-.sidebar a.active i {
+.sidebar-nav a.active .sidebar-nav__label,
+.sidebar-nav a.active .sidebar-nav__icon i {
   color: #fff;
   font-weight: 600;
 }
@@ -380,29 +428,63 @@ body {
 /* =====================================================
    ICON
 ===================================================== */
-.sidebar i {
+.sidebar-nav__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 22px;
-  font-size: 18px;
+  font-size: 17px;
   text-align: center;
 }
 
 /* =====================================================
-   TEXT
+   LABEL (oculta cuando está colapsado)
 ===================================================== */
-.sidebar span {
+.sidebar-nav__label {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease;
   white-space: nowrap;
 }
 
-.sidebar:hover span {
+.sidebar:hover .sidebar-nav__label {
   opacity: 1;
   visibility: visible;
 }
 
 /* =====================================================
-   ANIMATION
+   LOGOUT (separado del resto, al final)
+===================================================== */
+.sidebar-logout {
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+  border-radius: 0;
+}
+
+/* =====================================================
+   MOBILE
+===================================================== */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 72px;
+    padding: 10px 6px;
+  }
+  .sidebar:hover {
+    width: 72px;
+  }
+  .sidebar-content {
+    border-radius: 20px;
+  }
+  .sidebar-nav__label {
+    display: none;
+  }
+}
+/* =====================================================
+   ANIMATION -- ya no la usa el sidebar (se le quitó el
+   fondo en degradado animado), pero la usan otros
+   componentes (botones, tarjetas) -- se mantiene aquí
+   porque este era el único lugar donde estaba definida.
 ===================================================== */
 @keyframes liquidFlow {
   0% {
@@ -413,20 +495,6 @@ body {
   }
   100% {
     background-position: 0% 50%;
-  }
-}
-/* =====================================================
-   MOBILE
-===================================================== */
-@media (max-width: 768px) {
-  .sidebar {
-    width: 72px;
-  }
-  .sidebar:hover {
-    width: 72px;
-  }
-  .sidebar span {
-    display: none;
   }
 }
 /* =====================================================
@@ -1603,6 +1671,16 @@ html.dark select {
   margin: 0;
   color: var(--text-soft);
   font-size: var(--text-xs);
+}
+
+/* =====================================================
+   CHECKBOX CON TEXTO (ej. alertas de cumpleaños)
+===================================================== */
+.form-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
 }
 
 /* =========================================================
@@ -2824,6 +2902,60 @@ html.dark .page-section-title {
 }
 
 /* =====================================================
+   RESUMEN (siempre visible, antes del detalle expandible)
+===================================================== */
+.gx-profile__rows--resumen {
+  margin-bottom: 16px;
+}
+
+/* =====================================================
+   DETALLE EXPANDIBLE ("bajo demanda")
+===================================================== */
+.gx-profile__detalle {
+  margin-top: 4px;
+}
+
+.gx-profile__detalle > summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  transition: background 0.2s ease;
+}
+
+.gx-profile__detalle > summary::-webkit-details-marker {
+  display: none;
+}
+
+.gx-profile__detalle > summary:before {
+  content: "\f078";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-size: 11px;
+  transition: transform 0.2s ease;
+}
+
+.gx-profile__detalle[open] > summary:before {
+  transform: rotate(180deg);
+}
+
+.gx-profile__detalle > summary:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.gx-profile__detalle .gx-profile__rows {
+  margin-top: 16px;
+}
+
+/* =====================================================
    TARJETA
 ===================================================== */
 .gx-profile__row {
@@ -2929,12 +3061,11 @@ html.dark .page-section-title {
    ESTADO ACTIVIDAD
 ===================================================== */
 .gx-profile__activity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   align-self: flex-start;
-  padding: 10px 18px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 /* =====================================================
@@ -3477,6 +3608,21 @@ html:not(.dark) .stat-card {
 .stat-card.danger {
   border: 2px solid rgba(239, 68, 68, 0.55);
   box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15), 0 0 18px rgba(239, 68, 68, 0.12);
+}
+
+/* =====================================================
+   HIPERVÍNCULO -- cuando .stat-card es <a> (Fase 8+)
+===================================================== */
+a.stat-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.stat-card--activa {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* =========================================================
@@ -4403,8 +4549,20 @@ a.metric-strip__item:hover {
 .dona__leyenda li {
   display: flex;
   align-items: center;
+}
+
+.dona__leyenda-link {
+  display: flex;
+  align-items: center;
   gap: 10px;
   font-size: 14px;
+  width: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.dona__leyenda-link:hover .dona__leyenda-etiqueta {
+  color: var(--text);
 }
 
 .dona__punto {
@@ -4589,6 +4747,44 @@ a.attention-panel__row:hover {
     width: 100%;
   }
 }
+/* =====================================================
+   CUMPLEAÑOS (panel visible solo para quien recibe la alerta)
+===================================================== */
+.cumpleanos-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cumpleanos-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.cumpleanos-item a {
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+}
+
+.cumpleanos-item__detalle {
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.cumpleanos-item--hoy {
+  border: 1px solid var(--primary);
+}
+
 /* Jóvenes */
 /* =========================================================
    PANEL DE FILTROS (multi-filtro: desplegables + chips)
@@ -8485,6 +8681,35 @@ html.dark .asignaciones-page .asignaciones-table-card {
     font-size: 12px;
   }
 }
+/* =====================================================
+   MATERIAL DE CLASE (PDF + Word, ronda de mejoras)
+===================================================== */
+.discipulado-material-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.discipulado-material-slot__etiqueta {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-soft);
+  min-width: 38px;
+}
+
+.discipulado-material-form {
+  display: inline-flex;
+}
+
+.discipulado-material-cambiar {
+  cursor: pointer;
+  font-size: 0.85em;
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 /* Usuarios */
 /* =========================================================
    PAGE
@@ -11618,6 +11843,166 @@ html.dark .form-info i {
   .notificaciones-toolbar__actions .btn {
     width: 100%;
   }
+}
+/* ==========================================================
+   FORMACIÓN MODULE
+========================================================== */
+/* =========================================================
+   FORMACIÓN -- IMPORTAR (pulido visual, ronda de UX)
+   ---------------------------------------------------------
+   Todo queda bajo .formacion-importar para no afectar otras
+   páginas que reutilizan .form-card / .form-info / .table
+   (crear/editar jóvenes, usuarios, etc.) -- solo esta pantalla
+   necesitaba más aire, no el resto del sistema.
+========================================================= */
+.formacion-importar__info {
+  align-items: flex-start;
+  max-width: 100%;
+  padding: 22px 26px;
+  margin: 20px 0 24px;
+  gap: 16px;
+}
+
+.formacion-importar__info p {
+  margin: 0 0 14px;
+  line-height: 1.6;
+}
+
+.formacion-importar__info p:last-child {
+  margin-bottom: 0;
+}
+
+.formacion-importar__cta {
+  margin-top: 18px;
+}
+
+.formacion-importar__contrato {
+  max-width: 100%;
+  padding: 28px;
+}
+
+.formacion-importar__regla {
+  margin-top: 22px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border-radius: 14px;
+  line-height: 1.6;
+}
+
+.formacion-importar__card {
+  padding: 28px;
+}
+
+.formacion-importar__explicacion {
+  margin: 10px 0 22px;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.formacion-importar__accion {
+  margin-top: 20px;
+}
+
+.formacion-importar__nota {
+  margin-top: 20px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   TABLA DEL CONTRATO -- más aire, columnas largas legibles
+   (import order en app.scss les da precedencia sobre las
+   reglas genéricas de components/tables, sin usar !important)
+========================================================= */
+.formacion-importar__tabla th,
+.formacion-importar__tabla td {
+  padding: 20px 24px;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.6;
+}
+
+.formacion-importar__tabla thead th {
+  text-align: left;
+}
+
+.formacion-importar__tabla td:nth-child(4),
+.formacion-importar__tabla td:nth-child(5) {
+  min-width: 260px;
+}
+
+.formacion-importar__tabla code {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .formacion-importar__tabla {
+    min-width: 1100px;
+  }
+}
+/* REPORTES */
+/* =========================================================
+   REPORTES -- todo bajo .reportes-page para no afectar otras
+   pantallas que reutilizan .form-card / .table.
+========================================================= */
+.reportes-page__card {
+  max-width: 100%;
+  padding: 28px;
+}
+
+.reportes-page__explicacion {
+  margin: 10px 0 22px;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.reportes-page__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px 22px;
+  align-items: end;
+}
+
+.reportes-page__acciones {
+  grid-column: 1/-1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.reportes-page__cierre {
+  margin-top: 26px;
+}
+
+.reportes-page__seccion {
+  margin: 26px 0 12px;
+}
+
+.reportes-page__tabla th,
+.reportes-page__tabla td {
+  padding: 16px 20px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.reportes-page__nota {
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+/* ---- componente del dashboard que enlaza a Reportes ---- */
+.dashboard-reportes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.dashboard-reportes__texto {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.6;
 }
 
 /*# sourceMappingURL=app.css.map */

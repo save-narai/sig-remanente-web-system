@@ -18,10 +18,13 @@ $materiales = $pdo
     ->query('SELECT * FROM materiales_discipulado')
     ->fetchAll(PDO::FETCH_ASSOC);
 
+// Indexado por clase y tipo (PDF/WORD) -- ahora puede haber hasta
+// dos materiales por clase, cada uno independiente.
 $porBase = [];
 
 foreach ($materiales as $m) {
-    $porBase[(int)$m['clase_base_id']] = $m;
+    $tipo = $m['tipo'] ?? 'PDF';
+    $porBase[(int)$m['clase_base_id']][$tipo] = $m;
 }
 
 require_once __DIR__ . '/../../../includes/header.php';
@@ -67,8 +70,6 @@ require_once __DIR__ . '/../../../includes/header.php';
 
                     <?php foreach ($clases as $clase): ?>
 
-                        <?php $m = $porBase[(int)$clase['id']] ?? null; ?>
-
                         <tr>
 
                             <td>
@@ -78,59 +79,115 @@ require_once __DIR__ . '/../../../includes/header.php';
 
                             <td>
 
-                                <?php if ($m): ?>
+                                <?php
+                                $mPdf = $porBase[(int)$clase['id']]['PDF'] ?? null;
+                                $mWord = $porBase[(int)$clase['id']]['WORD'] ?? null;
+                                ?>
 
-                                    <a
-                                        class="btn btn-primary btn-sm"
-                                        target="_blank"
-                                        href="<?= BASE_URL ?>/controllers/discipuladoMaterialController.php?id=<?= (int)$m['id'] ?>"
-                                    >
-                                        Ver PDF
-                                    </a>
+                                <div class="discipulado-material-slot">
 
-                                    <a
-                                        class="btn btn-back btn-sm"
-                                        href="<?= BASE_URL ?>/controllers/discipuladoMaterialController.php?id=<?= (int)$m['id'] ?>&modo=descargar"
-                                    >
-                                        Descargar
-                                    </a>
+                                    <span class="discipulado-material-slot__etiqueta">PDF:</span>
 
-                                <?php else: ?>
+                                    <?php if ($mPdf): ?>
 
-                                    <span>Sin PDF</span>
-
-                                <?php endif; ?>
-
-                                <form
-                                    action="<?= BASE_URL ?>/controllers/discipuladoMaterialAdminController.php"
-                                    method="POST"
-                                    enctype="multipart/form-data"
-                                    class="discipulado-material-form"
-                                >
-
-                                    <?= csrfField() ?>
-
-                                    <input type="hidden" name="action" value="guardar_material_discipulado">
-                                    <input type="hidden" name="clase_base_id" value="<?= (int)$clase['id'] ?>">
-
-                                    <label
-                                        class="discipulado-material-cambiar"
-                                        style="cursor:pointer;font-size:0.85em;color:var(--primary,#6366f1);margin-left:8px;text-decoration:underline;"
-                                    >
-                                        <?= $m ? 'Reemplazar PDF' : 'Subir PDF' ?>
-                                        <input
-                                            type="file"
-                                            name="pdf"
-                                            accept="application/pdf"
-                                            required
-                                            onchange="this.form.submit()"
-                                            hidden
+                                        <a
+                                            class="btn btn-primary btn-sm"
+                                            target="_blank"
+                                            href="<?= BASE_URL ?>/controllers/discipuladoMaterialController.php?id=<?= (int)$mPdf['id'] ?>"
                                         >
-                                    </label>
+                                            Ver
+                                        </a>
 
-                                </form>
+                                        <a
+                                            class="btn btn-back btn-sm"
+                                            href="<?= BASE_URL ?>/controllers/discipuladoMaterialController.php?id=<?= (int)$mPdf['id'] ?>&modo=descargar"
+                                        >
+                                            Descargar
+                                        </a>
+
+                                    <?php else: ?>
+
+                                        <span>Sin PDF</span>
+
+                                    <?php endif; ?>
+
+                                    <form
+                                        action="<?= BASE_URL ?>/controllers/discipuladoMaterialAdminController.php"
+                                        method="POST"
+                                        enctype="multipart/form-data"
+                                        class="discipulado-material-form"
+                                    >
+
+                                        <?= csrfField() ?>
+
+                                        <input type="hidden" name="action" value="guardar_material_discipulado">
+                                        <input type="hidden" name="clase_base_id" value="<?= (int)$clase['id'] ?>">
+
+                                        <label class="discipulado-material-cambiar">
+                                            <?= $mPdf ? 'Reemplazar' : 'Subir' ?>
+                                            <input
+                                                type="file"
+                                                name="archivo"
+                                                accept="application/pdf"
+                                                required
+                                                onchange="this.form.submit()"
+                                                hidden
+                                            >
+                                        </label>
+
+                                    </form>
+
+                                </div>
+
+                                <div class="discipulado-material-slot">
+
+                                    <span class="discipulado-material-slot__etiqueta">Word:</span>
+
+                                    <?php if ($mWord): ?>
+
+                                        <a
+                                            class="btn btn-back btn-sm"
+                                            href="<?= BASE_URL ?>/controllers/discipuladoMaterialController.php?id=<?= (int)$mWord['id'] ?>&modo=descargar"
+                                        >
+                                            Descargar
+                                        </a>
+
+                                    <?php else: ?>
+
+                                        <span>Sin Word</span>
+
+                                    <?php endif; ?>
+
+                                    <form
+                                        action="<?= BASE_URL ?>/controllers/discipuladoMaterialAdminController.php"
+                                        method="POST"
+                                        enctype="multipart/form-data"
+                                        class="discipulado-material-form"
+                                    >
+
+                                        <?= csrfField() ?>
+
+                                        <input type="hidden" name="action" value="guardar_material_discipulado">
+                                        <input type="hidden" name="clase_base_id" value="<?= (int)$clase['id'] ?>">
+
+                                        <label class="discipulado-material-cambiar">
+                                            <?= $mWord ? 'Reemplazar' : 'Subir' ?>
+                                            <input
+                                                type="file"
+                                                name="archivo"
+                                                accept=".docx"
+                                                required
+                                                onchange="this.form.submit()"
+                                                hidden
+                                            >
+                                        </label>
+
+                                    </form>
+
+                                </div>
 
                             </td>
+
 
                         </tr>
 

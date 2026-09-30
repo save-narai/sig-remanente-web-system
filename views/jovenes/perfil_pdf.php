@@ -12,6 +12,7 @@ require_once __DIR__ . "/../../middleware/auth.php";
 require_once __DIR__ . "/../../middleware/permiso.php";
 require_once __DIR__ . "/../../config/conexion.php";
 require_once __DIR__ . "/../../services/actividadService.php";
+require_once __DIR__ . "/../../services/jovenService.php";
 require_once __DIR__ . "/../../helpers/format.php";
 require_once __DIR__ . "/../../helpers/fechas.php";
 
@@ -33,6 +34,7 @@ if (!tienePermiso("gestionar_jovenes")) {
 ===================================================== */
 
 actualizarEstadoActividad($pdo);
+actualizarEstadoCongregacional($pdo);
 
 /* =====================================================
    ID
@@ -113,7 +115,7 @@ if (!empty($joven["fecha_nacimiento"])) {
    CONEXIÓN
 ===================================================== */
 
-$con = estadoConexionJoven($pdo, $id);
+$con = etiquetaVisualActividadJuvenil($pdo, $id);
 
 $estadoConexion = $con["estado"];
 

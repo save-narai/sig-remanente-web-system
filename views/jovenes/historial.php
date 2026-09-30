@@ -4,6 +4,7 @@ require_once __DIR__ . "/../../middleware/auth.php";
 require_once __DIR__ . "/../../middleware/permiso.php";
 require_once __DIR__ . "/../../config/conexion.php";
 require_once __DIR__ . "/../../services/actividadService.php";
+require_once __DIR__ . "/../../services/jovenService.php";
 require_once __DIR__ . "/../../helpers/fechas.php";
 
 /* =====================================================
@@ -24,6 +25,7 @@ if (!tienePermiso("gestionar_jovenes")) {
 ===================================================== */
 
 actualizarEstadoActividad($pdo);
+actualizarEstadoCongregacional($pdo);
 
 /* =====================================================
    ID DEL JOVEN
@@ -129,10 +131,10 @@ $porcentaje = $total > 0
     : 0;
 
 /* =====================================================
-   CONEXIÓN
+   ESTADO DE ACTIVIDAD (modelo único 4/12)
 ===================================================== */
 
-$con = estadoConexionJoven(
+$con = etiquetaVisualActividadJuvenil(
     $pdo,
     $joven_id
 );
@@ -149,10 +151,12 @@ $claseConexion = match ($con["color"]) {
 
 };
 
-$faltasConsecutivas = faltasConsecutivasConexion(
+$racha = ausenciasConsecutivasJuveniles(
     $pdo,
     $joven_id
 );
+
+$faltasConsecutivas = $racha["ausencias_consecutivas_demostrables"];
 
 /* =====================================================
    HEADER
@@ -289,7 +293,7 @@ require_once __DIR__ . "/../../includes/header.php";
          ALERTA
     ====================================================== -->
 
-    <?php if ($faltasConsecutivas >= 3): ?>
+    <?php if ($faltasConsecutivas >= UMBRAL_ALERTA_JUVENIL): ?>
 
         <div class="page-section">
 

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/cumpleanosService.php';
+
 /* ==========================================================
    USUARIO SERVICE
 ========================================================== */
@@ -666,6 +668,43 @@ function generarTokenSeguro(
 }
 
 /* ==========================================================
+   VINCULAR JOVEN A USUARIO (Fase 6)
+   ----------------------------------------------------------
+   Relación mínima joven <-> usuario que no existía antes del
+   Plan Maestro Fase 6. jovenes.usuario_id es UNIQUE, así que
+   primero se desvincula cualquier joven que apuntara a este
+   usuario (por si se está cambiando o quitando el vínculo)
+   antes de fijar el nuevo. $jovenId null/0 = sin vínculo.
+========================================================== */
+
+function vincularJovenAUsuario(
+    PDO $pdo,
+    int $usuarioId,
+    ?int $jovenId
+): void {
+
+    $pdo->prepare("
+        UPDATE jovenes
+        SET usuario_id = NULL
+        WHERE usuario_id = :usuario_id
+    ")->execute([
+        'usuario_id' => $usuarioId
+    ]);
+
+    if (!empty($jovenId)) {
+
+        $pdo->prepare("
+            UPDATE jovenes
+            SET usuario_id = :usuario_id
+            WHERE id = :joven_id
+        ")->execute([
+            'usuario_id' => $usuarioId,
+            'joven_id' => $jovenId
+        ]);
+    }
+}
+
+/* ==========================================================
    CREAR USUARIO
 ========================================================== */
 
@@ -887,13 +926,28 @@ function crearUsuario(
 
     ]);
 
+    $usuarioId = (int) $pdo->lastInsertId();
+
+    /* ======================================================
+       VINCULAR JOVEN (Fase 6 -- opcional, fuente de verdad de
+       "servidor del Ministerio de Jóvenes")
+    ====================================================== */
+
+    vincularJovenAUsuario(
+        $pdo,
+        $usuarioId,
+        !empty($datos['joven_id']) ? (int) $datos['joven_id'] : null
+    );
+
+    guardarPreferenciaAlertaCumpleanos($pdo, $usuarioId, $datos);
+
     /* ======================================================
        RESPUESTA
     ====================================================== */
 
     return [
 
-        'id' => (int) $pdo->lastInsertId(),
+        'id' => $usuarioId,
 
         'nombre' => $nombre,
 
@@ -1180,6 +1234,14 @@ function editarUsuario(
 
         ]);
 
+        vincularJovenAUsuario(
+            $pdo,
+            $id,
+            !empty($datos['joven_id']) ? (int) $datos['joven_id'] : null
+        );
+
+    guardarPreferenciaAlertaCumpleanos($pdo, $id, $datos);
+
         return;
 
     }
@@ -1215,6 +1277,14 @@ function editarUsuario(
         ':id' => $id
 
     ]);
+
+    vincularJovenAUsuario(
+        $pdo,
+        $id,
+        !empty($datos['joven_id']) ? (int) $datos['joven_id'] : null
+    );
+
+    guardarPreferenciaAlertaCumpleanos($pdo, $id, $datos);
 
 }
 

@@ -40,6 +40,27 @@ if (!is_array($ciclos)) {
     $ciclos = [];
 }
 
+/*
+|--------------------------------------------------------------------------
+| Historial de Discipulado sin ciclo asignado
+|--------------------------------------------------------------------------
+|
+| Reuniones reales (tipo='Discipulado') registradas antes de que
+| existiera el módulo de ciclos/clases. Estrictamente informativo:
+| no se crea ciclo, clase, modalidad ni progreso para ellas.
+|
+*/
+
+$historialSinCiclo = [];
+
+if (function_exists('obtenerReunionesDiscipuladoSinVincular')) {
+    $historialSinCiclo = obtenerReunionesDiscipuladoSinVincular($pdo);
+}
+
+if (!is_array($historialSinCiclo)) {
+    $historialSinCiclo = [];
+}
+
 require_once __DIR__ . '/../../../includes/header.php';
 
 ?>
@@ -265,6 +286,82 @@ require_once __DIR__ . '/../../../includes/header.php';
         </div>
 
     </div>
+
+    <?php if (!empty($historialSinCiclo)): ?>
+
+    <div class="page-section">
+
+        <div class="section-header">
+
+            <div>
+
+                <h2 class="section-title">
+                    Historial de Discipulado sin ciclo asignado
+                </h2>
+
+                <p class="section-subtitle">
+                    Reuniones reales de Discipulado registradas antes de que existiera este módulo. Es información histórica, no datos incompletos por corregir.
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="table gx-table">
+
+                <thead>
+
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Título</th>
+                        <th>Tipo</th>
+                        <th>Asistencias reales</th>
+                        <th>Jóvenes distintos</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    <?php foreach ($historialSinCiclo as $reunion): ?>
+
+                        <tr>
+
+                            <td>
+                                <?= htmlspecialchars((string) ($reunion['fecha'] ?? '—')) ?>
+                            </td>
+
+                            <td>
+                                <?= htmlspecialchars((string) ($reunion['titulo'] ?? '—')) ?>
+                            </td>
+
+                            <td>
+                                <?= htmlspecialchars((string) ($reunion['tipo'] ?? '—')) ?>
+                            </td>
+
+                            <td>
+                                <?= (int) ($reunion['asistencias_reales'] ?? 0) ?>
+                            </td>
+
+                            <td>
+                                <?= (int) ($reunion['jovenes_distintos'] ?? 0) ?>
+                            </td>
+
+                        </tr>
+
+                    <?php endforeach; ?>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <?php endif; ?>
 
 </div>
 

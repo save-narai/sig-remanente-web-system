@@ -352,6 +352,94 @@
 }
 
 /* =====================================================
+   RESUMEN (siempre visible, antes del detalle expandible)
+===================================================== */
+
+.gx-profile__rows--resumen{
+
+    margin-bottom:16px;
+
+}
+
+/* =====================================================
+   DETALLE EXPANDIBLE ("bajo demanda")
+===================================================== */
+
+.gx-profile__detalle{
+
+    margin-top:4px;
+
+}
+
+.gx-profile__detalle > summary{
+
+    cursor:pointer;
+
+    list-style:none;
+
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    padding:10px 18px;
+
+    border-radius:999px;
+
+    font-size:13px;
+
+    font-weight:700;
+
+    color:#fff;
+
+    background:rgba(255,255,255,.16);
+
+    border:1px solid rgba(255,255,255,.24);
+
+    transition:background .2s ease;
+
+}
+
+.gx-profile__detalle > summary::-webkit-details-marker{
+
+    display:none;
+
+}
+
+.gx-profile__detalle > summary:before{
+
+    content:"\f078";
+
+    font-family:"Font Awesome 6 Free";
+
+    font-weight:900;
+
+    font-size:11px;
+
+    transition:transform .2s ease;
+
+}
+
+.gx-profile__detalle[open] > summary:before{
+
+    transform:rotate(180deg);
+
+}
+
+.gx-profile__detalle > summary:hover{
+
+    background:rgba(255,255,255,.24);
+
+}
+
+.gx-profile__detalle .gx-profile__rows{
+
+    margin-top:16px;
+
+}
+
+/* =====================================================
    TARJETA
 ===================================================== */
 
@@ -537,17 +625,15 @@
 
 .gx-profile__activity{
 
+    display:flex;
+
+    align-items:center;
+
+    flex-wrap:wrap;
+
+    gap:10px;
+
     align-self:flex-start;
-
-    padding:10px 18px;
-
-    border-radius:999px;
-
-    font-size:13px;
-
-    font-weight:700;
-
-    white-space:nowrap;
 
 }
 

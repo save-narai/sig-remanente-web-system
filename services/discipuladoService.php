@@ -1307,11 +1307,15 @@ function obtenerClasesDiscipulado(
 
     $stmt = $pdo->prepare("
 
-        SELECT cd.*, u.nombre AS profesor_nombre, m.id AS material_id
+        SELECT cd.*, u.nombre AS profesor_nombre,
+            (
+                SELECT MIN(m2.id)
+                FROM materiales_discipulado m2
+                WHERE m2.clase_base_id = cd.clase_base_id
+            ) AS material_id
 
         FROM clases_discipulado cd
         LEFT JOIN usuarios u ON u.id = cd.profesor_id
-        LEFT JOIN materiales_discipulado m ON m.clase_base_id = cd.clase_base_id
 
         WHERE cd.ciclo_id = :ciclo_id
 
@@ -3775,6 +3779,63 @@ function obtenerVinculoReunionDiscipulado(
     ]);
 
     return $stmt->fetch(PDO::FETCH_ASSOC);
+
+
+}
+
+
+/* ==========================================================
+   REUNIONES DE DISCIPULADO SIN VINCULAR (HISTÓRICO REAL)
+   ----------------------------------------------------------
+   Solo lectura. Devuelve reuniones tipo='Discipulado' que NO
+   tienen fila en discipulado_reuniones — es decir, asistencia
+   histórica real registrada antes de que existiera el módulo
+   de ciclos/clases. No se inventa ciclo, clase, modalidad ni
+   progreso: esta función no escribe nada, solo expone lo que
+   ya existe en reuniones/asistencia tal cual.
+========================================================== */
+
+function obtenerReunionesDiscipuladoSinVincular(
+    PDO $pdo
+): array {
+
+    $stmt = $pdo->prepare("
+
+        SELECT
+
+            r.id,
+            r.titulo,
+            r.tipo,
+            r.fecha,
+
+            COUNT(a.id) AS asistencias_reales,
+
+            COUNT(DISTINCT a.joven_id) AS jovenes_distintos
+
+        FROM reuniones r
+
+        LEFT JOIN asistencia a
+            ON a.reunion_id = r.id
+            AND a.asistio = 1
+
+        WHERE r.tipo = 'Discipulado'
+
+        AND NOT EXISTS (
+
+            SELECT 1
+            FROM discipulado_reuniones dr
+            WHERE dr.reunion_id = r.id
+        )
+
+        GROUP BY r.id, r.titulo, r.tipo, r.fecha
+
+        ORDER BY r.fecha ASC
+
+    ");
+
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 }
 

@@ -1,0 +1,126 @@
+/* =========================================================
+   FORMACIÓN -- IMPORTAR (pulido visual, ronda de UX)
+   ---------------------------------------------------------
+   Todo queda bajo .formacion-importar para no afectar otras
+   páginas que reutilizan .form-card / .form-info / .table
+   (crear/editar jóvenes, usuarios, etc.) -- solo esta pantalla
+   necesitaba más aire, no el resto del sistema.
+========================================================= */
+
+.formacion-importar__info{
+
+    align-items:flex-start;
+
+    max-width:100%;
+
+    padding:22px 26px;
+
+    margin:20px 0 24px;
+
+    gap:16px;
+}
+
+.formacion-importar__info p{
+
+    margin:0 0 14px;
+
+    line-height:1.6;
+}
+
+.formacion-importar__info p:last-child{
+
+    margin-bottom:0;
+}
+
+.formacion-importar__cta{
+
+    margin-top:18px;
+}
+
+.formacion-importar__contrato{
+
+    max-width:100%;
+
+    padding:28px;
+}
+
+.formacion-importar__regla{
+
+    margin-top:22px;
+
+    padding:16px 20px;
+
+    background:var(--surface);
+
+    border-radius:14px;
+
+    line-height:1.6;
+}
+
+.formacion-importar__card{
+
+    padding:28px;
+}
+
+.formacion-importar__explicacion{
+
+    margin:10px 0 22px;
+
+    color:var(--text-soft);
+
+    line-height:1.6;
+}
+
+.formacion-importar__accion{
+
+    margin-top:20px;
+}
+
+.formacion-importar__nota{
+
+    margin-top:20px;
+
+    line-height:1.6;
+}
+
+/* =========================================================
+   TABLA DEL CONTRATO -- más aire, columnas largas legibles
+   (import order en app.scss les da precedencia sobre las
+   reglas genéricas de components/tables, sin usar !important)
+========================================================= */
+
+.formacion-importar__tabla th,
+.formacion-importar__tabla td{
+
+    padding:20px 24px;
+
+    text-align:left;
+
+    vertical-align:top;
+
+    line-height:1.6;
+}
+
+.formacion-importar__tabla thead th{
+
+    text-align:left;
+}
+
+.formacion-importar__tabla td:nth-child(4),
+.formacion-importar__tabla td:nth-child(5){
+
+    min-width:260px;
+}
+
+.formacion-importar__tabla code{
+
+    white-space:nowrap;
+}
+
+@media(max-width:768px){
+
+    .formacion-importar__tabla{
+
+        min-width:1100px;
+    }
+}

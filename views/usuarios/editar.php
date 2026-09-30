@@ -6,6 +6,8 @@ require_once __DIR__ . '/../../config/bootstrap.php';
 
 require_once __DIR__ . '/../../services/usuarioService.php';
 
+require_once __DIR__ . '/../../services/jovenService.php';
+
 /*
 |--------------------------------------------------------------------------
 | TODO
@@ -162,6 +164,25 @@ $roles = $pdo->query("
     ORDER BY nombre ASC
 
 ")->fetchAll(PDO::FETCH_ASSOC);
+
+/* ==========================================================
+   JOVEN VINCULADO (Fase 6)
+========================================================== */
+
+$stmtJovenVinculado = $pdo->prepare("
+    SELECT id FROM jovenes WHERE usuario_id = :usuario_id
+");
+
+$stmtJovenVinculado->execute([
+    'usuario_id' => $id
+]);
+
+$jovenVinculadoId = (int) ($stmtJovenVinculado->fetchColumn() ?: 0);
+
+$jovenesDisponibles = obtenerJovenesDisponiblesParaVincular(
+    $pdo,
+    $id
+);
 
 /* ==========================================================
    CONFIGURACIÓN
@@ -519,6 +540,95 @@ require_once "../../includes/header.php";
                     </select>
 
                 <?php endif; ?>
+
+            </div>
+
+            <!-- ALERTAS DE CUMPLEAÑOS -->
+
+            <?php if (cumpleanosDisponible($pdo)): ?>
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    <i class="fa-solid fa-cake-candles"></i>
+
+                    Alertas de cumpleaños
+
+                </label>
+
+                <input type="hidden" name="recibe_alertas_cumpleanos" value="0">
+
+                <label class="form-check">
+
+                    <input
+                        type="checkbox"
+                        name="recibe_alertas_cumpleanos"
+                        value="1"
+                        <?= usuarioRecibeAlertasCumpleanos($pdo, (int) $id) ? 'checked' : '' ?>
+                    >
+
+                    Recibir por correo el aviso diario de cumpleaños
+
+                </label>
+
+                <p class="form-hint">
+                    Se envía al correo de este usuario cuando algún joven cumple años ese día.
+                </p>
+
+            </div>
+
+            <?php else: ?>
+
+            <p class="form-hint">
+                Alertas de cumpleaños no disponibles todavía: falta ejecutar la migración
+                <code>database/migrations/20260926_alertas_cumpleanos.sql</code>.
+            </p>
+
+            <?php endif; ?>
+
+            <!-- JOVEN ASOCIADO (Fase 6) -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    <i class="fa-solid fa-link"></i>
+
+                    Joven asociado (opcional)
+
+                </label>
+
+                <select
+
+                    id="joven_id"
+
+                    name="joven_id"
+
+                    class="form-select"
+
+                >
+
+                    <option value="">
+                        Ninguno -- este usuario no es un joven del ministerio
+                    </option>
+
+                    <?php foreach ($jovenesDisponibles as $joven): ?>
+
+                        <option
+                            value="<?= (int) $joven['id'] ?>"
+                            <?= (int) $joven['id'] === $jovenVinculadoId ? 'selected' : '' ?>
+                        >
+                            <?= htmlspecialchars($joven['nombre_completo']) ?>
+                        </option>
+
+                    <?php endforeach; ?>
+
+                </select>
+
+                <p class="form-hint">
+                    Si este usuario es un servidor del Ministerio de Jóvenes que también está registrado como joven, vincúlalo aquí -- es la única forma en que el sistema lo reconoce como tal.
+                </p>
 
             </div>
 

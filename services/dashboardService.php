@@ -34,30 +34,35 @@ function obtenerDashboardData(PDO $pdo): array
     $resumen["antiguos"] =
         $nuevos["antiguos"];
 
-    // Distribución por estado_espiritual (congregantes, discipulado, etc.)
-    // usa las mismas 5 categorías ya definidas en jovenService.php
-    // (ESTADOS_ESPIRITUALES), no se inventa ninguna nueva.
+    // Distribución por estado congregacional (Fase 6 -- reemplaza a
+    // lo que antes se llamaba "estado espiritual"; ahora son solo 2
+    // categorías: NUEVO/CONGREGANTE, ver jovenService.php).
     $resumen["porEstadoEspiritual"] =
         obtenerDistribucionEstadoEspiritual($pdo);
 
-    // Indicador provisional "Servidores/Líderes de Jóvenes" para el
-    // Dashboard: estado_espiritual IN ('SERVIDOR','LIDER'). A
-    // propósito NO es lo mismo que resumen['servidores'] (que sigue
-    // viniendo de la columna es_servidor, sin tocar, para lo que ya
-    // la use). PENDIENTE documentado: ni estado_espiritual ni
-    // es_servidor tienen en el modelo actual una columna que indique
-    // "ministerio de Jóvenes" vs "otro ministerio" (lo que pide la
-    // Fase 4) — este número es el mejor disponible hoy, no una
-    // certeza sobre a qué ministerio pertenece cada quien.
+    // Servidores del Ministerio de Jóvenes: son los USUARIOS ACTIVOS
+    // registrados en la plataforma (administradora/secretaria, líder,
+    // sublíder y usuarios independientes) -- decisión posterior a la
+    // reunión de afinación. Ya no se calcula desde jóvenes ni se
+    // excluye ningún rol: quien tiene una cuenta activa está sirviendo
+    // en el ministerio. Se conserva la clave "servidoresLideresJovenes"
+    // para no romper la vista.
     $resumen["servidoresLideresJovenes"] =
-        $resumen["porEstadoEspiritual"]["servidor"] +
-        $resumen["porEstadoEspiritual"]["lider"];
+        (int) $pdo->query("
+            SELECT COUNT(*)
 
-    // Actividad/riesgo: se reutiliza actividadService.php tal cual
-    // (Conectado / Observación / Riesgo / Alto Riesgo), en vez de la
-    // lógica propia que tenía este archivo antes (ver informe de la
-    // Fase 2 - Etapa 1 para el detalle de la duplicación encontrada).
-    $conexion = resumenConexionMinisterial($pdo);
+            FROM usuarios
+
+            WHERE activo = 1
+        ")->fetchColumn();
+
+    // Actividad juvenil: única fuente de verdad, modelo 4/12
+    // confirmado (ACTIVO/ALERTA/INACTIVO). El modelo antiguo
+    // (Conectado/Observación/Riesgo/Alto Riesgo, basado solo en
+    // "Grupo Conexión" y umbrales 3/4 propios) fue retirado por
+    // completo: podía mostrar "Conectado" mientras
+    // jovenes.estado_actividad ya marcaba INACTIVO.
+    $actividad = resumenActividadJuvenil($pdo);
 
     // Seguimiento pendiente (jóvenes NUEVOS sin nadie asignado este
     // mes): se reutiliza asignacionSeguimientoService.php, la misma
@@ -107,29 +112,20 @@ function obtenerDashboardData(PDO $pdo): array
             "estado" => []
         ],
 
-        // Se conservan estas 3 claves (mismo nombre y mismo criterio
-        // de combinación que antes: alertas = riesgo + alto) para no
-        // romper la vista actual, que ya las consume. Lo único que
-        // cambió es la FUENTE del número: ahora sale de
-        // actividadService en vez de una copia local del cálculo.
-        "alertas" =>
-            $conexion["riesgo"] + $conexion["alto"],
+        // Modelo único (4/12 ausencias consecutivas demostrables).
+        // "alerta" = 4 a 11 ausencias consecutivas (informativo,
+        // no persistido). "inactivos" ya viene arriba en $resumen,
+        // tomado de jovenes.estado_actividad (persistido); se repite
+        // aquí también por si una vista quiere el número "en vivo"
+        // (antes de que actualizarEstadoActividad() corra de nuevo).
+        "alerta" =>
+            $actividad["alerta"],
 
-        "riesgo" =>
-            $conexion["riesgo"],
+        "activosEnVivo" =>
+            $actividad["activos"],
 
-        "alto" =>
-            $conexion["alto"],
-
-        // Nuevo, todavía sin usar en la vista (eso es la Etapa 2):
-        // se deja disponible aquí para que el rediseño del dashboard
-        // pueda tomarlo, ya con la fuente correcta y sin duplicar
-        // ninguna consulta.
-        "conectados" =>
-            $conexion["conectados"],
-
-        "observacion" =>
-            $conexion["observacion"],
+        "inactivosEnVivo" =>
+            $actividad["inactivos"],
 
         // Las 3 fuentes de "atención pendiente" se entregan POR
         // SEPARADO a propósito (decisión del usuario): no se suman
@@ -307,12 +303,13 @@ function obtenerNuevosAntiguos(
 
 
 /* =========================================================
-   DISTRIBUCION POR ESTADO ESPIRITUAL
+   DISTRIBUCION POR ESTADO CONGREGACIONAL (Fase 6)
    ---------------------------------------------------------
-   Reutiliza las mismas 5 categorias ya definidas en
-   jovenService.php (ESTADOS_ESPIRITUALES): NUEVO,
-   CONGREGANTE, DISCIPULADO, SERVIDOR, LIDER. No se agrega
-   ninguna categoria ni columna nueva.
+   Ya NO son 5 categorias. jovenes.estado_espiritual quedo
+   restringido a NUEVO/CONGREGANTE unicamente (ver migracion
+   20260922_estado_congregacional_y_vinculo_usuario.sql y
+   jovenService.php::ESTADOS_CONGREGACIONALES). Discipulado y
+   Servidor/Lider ya no viven aqui.
 ========================================================= */
 
 function obtenerDistribucionEstadoEspiritual(
@@ -339,9 +336,6 @@ function obtenerDistribucionEstadoEspiritual(
     return [
 
         "nuevo" => (int)($filas["NUEVO"] ?? 0),
-        "congregante" => (int)($filas["CONGREGANTE"] ?? 0),
-        "discipulado" => (int)($filas["DISCIPULADO"] ?? 0),
-        "servidor" => (int)($filas["SERVIDOR"] ?? 0),
-        "lider" => (int)($filas["LIDER"] ?? 0)
+        "congregante" => (int)($filas["CONGREGANTE"] ?? 0)
     ];
 }
